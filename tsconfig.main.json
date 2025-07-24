@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist/main",
+    "module": "ESNext",
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "jsx": "preserve",
+    "moduleResolution": "node"
+  },
+  "include": [
+    "src/main/**/*",
+    "src/shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "release",
+    "src/renderer"
+  ]
+}
