@@ -57,15 +57,36 @@ const SearchBox: React.FC = () => {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
-      className="relative"
-    >
+    <div className="relative">
       {/* 主搜索框 */}
       <div className="search-box">
-        <div className="relative">
+        <div className="relative flex items-center">
+          {/* Logo */}
+          <div className="flex-shrink-0 pl-4 pr-2">
+            <div className="w-6 h-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <defs>
+                  <linearGradient id="modern-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#667eea"/>
+                    <stop offset="100%" stopColor="#764ba2"/>
+                  </linearGradient>
+                </defs>
+                {/* 主体闪电 */}
+                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="url(#modern-gradient)"/>
+                {/* 内部装饰闪电 */}
+                <path d="M13 4L6 12H11L10.5 18L17 11H12L13 4Z" fill="white" opacity="0.3"/>
+                {/* 中心装饰线 */}
+                <rect x="11" y="10" width="2" height="4" fill="white"/>
+                {/* 装饰点 */}
+                <circle cx="13" cy="3" r="0.8" fill="white"/>
+                <circle cx="11" cy="21" r="0.8" fill="white"/>
+                <circle cx="4" cy="14" r="0.6" fill="white" opacity="0.8"/>
+                <circle cx="20" cy="10" r="0.6" fill="white" opacity="0.8"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* 搜索输入框 */}
           <input
             ref={inputRef}
             type="text"
@@ -73,21 +94,31 @@ const SearchBox: React.FC = () => {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="搜索应用、文件或执行计算..."
-            className="search-input text-select"
+            className="search-input-with-logo text-select"
             autoComplete="off"
             spellCheck={false}
           />
-          
-          {/* 加载指示器 */}
-          {isLoading && (
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+
+          {/* 右侧提示标签和加载指示器 */}
+          <div className="flex-shrink-0 pr-4 flex items-center space-x-2">
+            {/* 加载指示器 */}
+            {isLoading && (
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full"
+                className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"
               />
-            </div>
-          )}
+            )}
+
+            {/* Alt+Space 提示标签 */}
+            {!isLoading && !query && (
+              <div className="shortcut-hint">
+                <span className="shortcut-key">Alt</span>
+                <span className="shortcut-plus">+</span>
+                <span className="shortcut-key">Space</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -105,7 +136,7 @@ const SearchBox: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }
 
