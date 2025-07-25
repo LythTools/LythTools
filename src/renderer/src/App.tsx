@@ -3,7 +3,7 @@ import SearchBox from './components/SearchBox'
 import { useSearchStore } from './stores/searchStore'
 
 const App: React.FC = () => {
-  const { initializeSearch } = useSearchStore()
+  const { initializeSearch, isMenuOpen, setMenuOpen } = useSearchStore()
 
   useEffect(() => {
     // 初始化搜索功能
@@ -11,9 +11,15 @@ const App: React.FC = () => {
 
     // 监听窗口事件
     const handleKeyDown = (event: KeyboardEvent) => {
-      // ESC键隐藏窗口
+      // ESC键处理
       if (event.key === 'Escape') {
-        window.electronAPI?.hide()
+        if (isMenuOpen) {
+          // 如果菜单打开，关闭菜单
+          setMenuOpen(false)
+        } else {
+          // 如果菜单关闭，隐藏窗口
+          window.electronAPI?.hide()
+        }
       }
     }
 
@@ -22,7 +28,7 @@ const App: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [initializeSearch])
+  }, [initializeSearch, isMenuOpen, setMenuOpen])
 
   return (
     <div className="search-container">

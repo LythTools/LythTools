@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import Fuse from 'fuse.js'
-import { SearchResultItem, SearchConfig, SearchCategory } from '../types'
+import { SearchResultItem, SearchConfig, SearchCategory, ApplicationInfo, FileInfo } from '../types'
 
 interface SearchState {
   query: string
@@ -8,18 +8,22 @@ interface SearchState {
   selectedIndex: number
   isLoading: boolean
   fuse: Fuse<SearchResultItem> | null
-  
+  isMenuOpen: boolean
+  applications: ApplicationInfo[]
+
   // Actions
   setQuery: (query: string) => void
   setResults: (results: SearchResultItem[]) => void
   setSelectedIndex: (index: number) => void
   setLoading: (loading: boolean) => void
+  setMenuOpen: (open: boolean) => void
   search: (query: string) => void
   executeSelected: () => void
   navigateUp: () => void
   navigateDown: () => void
   clearResults: () => void
   initializeSearch: () => void
+  loadApplications: () => Promise<void>
 }
 
 // 默认搜索配置
@@ -95,6 +99,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   selectedIndex: 0,
   isLoading: false,
   fuse: null,
+  isMenuOpen: false,
+  applications: [],
 
   setQuery: (query: string) => {
     set({ query })
@@ -116,63 +122,119 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     set({ isLoading: loading })
   },
 
-  search: (query: string) => {
-    const { fuse } = get()
-    
+  setMenuOpen: (open: boolean) => {
+    set({ isMenuOpen: open })
+    // 不再调整窗口大小，使用固定窗口
+  },
+
+  search: async (query: string) => {
+    const { applications } = get()
+
     if (!query.trim()) {
       set({ results: [], selectedIndex: 0 })
       return
     }
 
-    if (!fuse) {
-      console.warn('Fuse实例未初始化')
-      return
-    }
-
     set({ isLoading: true })
 
-    // 模拟异步搜索
-    setTimeout(() => {
-      try {
-        // 检查是否为数学表达式
-        if (/^[\d+\-*/().\s]+$/.test(query)) {
-          try {
-            const result = eval(query)
-            const calcResult: SearchResultItem = {
-              id: `calc-${Date.now()}`,
-              title: `${query} = ${result}`,
-              description: '数学计算结果',
-              category: SearchCategory.CALCULATOR,
-              action: () => {
-                navigator.clipboard?.writeText(result.toString())
-                console.log('计算结果已复制到剪贴板')
-              }
-            }
-            set({ results: [calcResult], selectedIndex: 0, isLoading: false })
-            return
-          } catch {
-            // 如果不是有效的数学表达式，继续正常搜索
-          }
-        }
+    try {
+      const results: SearchResultItem[] = []
 
-        const searchResults = fuse.search(query, { limit: defaultConfig.maxResults })
-        const results = searchResults.map(result => ({
-          ...result.item,
-          score: result.score
+      // 1. 计算器功能 - 优先级最高
+      if (/^[\d+\-*/().\s]+$/.test(query)) {
+        try {
+          const result = Function('"use strict"; return (' + query + ')')()
+          if (typeof result === 'number' && !isNaN(result)) {
+            results.push({
+              id: 'calculator',
+              title: `${query} = ${result}`,
+              description: '计算结果 - 点击复制',
+              category: SearchCategory.CALCULATOR,
+              type: 'calculator',
+              icon: '🧮',
+              action: () => {
+                navigator.clipboard.writeText(result.toString())
+                window.electronAPI.hide()
+              }
+            })
+          }
+        } catch (e) {
+          // 忽略计算错误
+        }
+      }
+
+      // 2. 搜索应用程序
+      const appResults = applications
+        .filter(app => app.name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 5)
+        .map(app => ({
+          id: `app-${app.path}`,
+          title: app.name,
+          description: `应用程序`,
+          category: SearchCategory.APPLICATION,
+          type: 'application' as const,
+          path: app.path,
+          icon: '🚀',
+          action: async () => {
+            const success = await window.electronAPI.openApplication(app.path)
+            if (success) {
+              window.electronAPI.hide()
+            }
+          }
         }))
 
-        set({ results, selectedIndex: 0, isLoading: false })
-      } catch (error) {
-        console.error('搜索出错:', error)
-        set({ results: [], selectedIndex: 0, isLoading: false })
+      results.push(...appResults)
+
+      // 3. 搜索文件
+      if (window.electronAPI.searchFiles) {
+        const files = await window.electronAPI.searchFiles(query, 8)
+        const fileResults = files.map(file => ({
+          id: `file-${file.path}`,
+          title: file.name,
+          description: `${file.type === 'folder' ? '文件夹' : '文件'}`,
+          category: file.type === 'folder' ? SearchCategory.FOLDER : SearchCategory.FILE,
+          type: file.type,
+          path: file.path,
+          icon: file.type === 'folder' ? '📁' : '📄',
+          action: async () => {
+            const success = await window.electronAPI.openFile(file.path)
+            if (success) {
+              window.electronAPI.hide()
+            }
+          }
+        }))
+
+        results.push(...fileResults)
       }
-    }, 100) // 添加轻微延迟以提供更好的用户体验
+
+      // 4. 网络搜索建议
+      if (results.length < 3) {
+        results.push({
+          id: 'web-search',
+          title: `在网络上搜索 "${query}"`,
+          description: '使用默认浏览器搜索',
+          category: SearchCategory.WEB,
+          type: 'web',
+          icon: '🌐',
+          action: () => {
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
+            window.electronAPI.openFile(searchUrl)
+            window.electronAPI.hide()
+          }
+        })
+      }
+
+      set({ results: results.slice(0, 8), selectedIndex: 0, isLoading: false })
+    } catch (error) {
+      console.error('搜索出错:', error)
+      set({ results: [], selectedIndex: 0, isLoading: false })
+    }
   },
 
   executeSelected: () => {
     const { results, selectedIndex } = get()
     const selectedItem = results[selectedIndex]
-    
+
     if (selectedItem) {
       selectedItem.action()
       // 执行后隐藏窗口
@@ -200,11 +262,21 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     set({ results: [], selectedIndex: 0, query: '' })
   },
 
-  initializeSearch: () => {
-    const fuse = new Fuse(mockSearchData, {
-      ...defaultConfig,
-      keys: defaultConfig.keys
-    })
-    set({ fuse })
+  initializeSearch: async () => {
+    // 加载应用程序列表
+    await get().loadApplications()
+    console.log('搜索功能已初始化')
+  },
+
+  loadApplications: async () => {
+    try {
+      if (window.electronAPI.searchApplications) {
+        const apps = await window.electronAPI.searchApplications()
+        set({ applications: apps })
+        console.log(`已加载 ${apps.length} 个应用程序`)
+      }
+    } catch (error) {
+      console.error('加载应用程序失败:', error)
+    }
   }
 }))

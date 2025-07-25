@@ -1,32 +1,144 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useSearchStore } from '../stores/searchStore'
 import { SearchCategory } from '../types'
 
+// 获取类别图标
+const getCategoryIcon = (category: SearchCategory): string => {
+  switch (category) {
+    case SearchCategory.APPLICATION:
+      return '🚀'
+    case SearchCategory.FILE:
+      return '📄'
+    case SearchCategory.FOLDER:
+      return '📁'
+    case SearchCategory.WEB:
+      return '🌐'
+    case SearchCategory.CALCULATOR:
+      return '🧮'
+    case SearchCategory.SYSTEM:
+      return '⚙️'
+    default:
+      return '📄'
+  }
+}
+
+// 应用程序图标组件
+const AppIcon: React.FC<{ item: any }> = ({ item }) => {
+  const [iconSrc, setIconSrc] = useState<string | null>(null)
+  const [iconError, setIconError] = useState(false)
+
+  useEffect(() => {
+    if (item.type === 'application' && item.path && window.electronAPI.getFileIcon) {
+      console.log('前端：同步获取图标，路径:', item.path)
+
+      try {
+        // 同步获取图标
+        const icon = window.electronAPI.getFileIcon(item.path)
+
+        if (icon) {
+          console.log('前端：同步获取图标成功，数据长度:', icon.length)
+          setIconSrc(icon)
+          setIconError(false)
+        } else {
+          console.log('前端：同步获取图标失败，使用降级方案')
+          setIconError(true)
+        }
+      } catch (error) {
+        console.error('前端：同步获取图标异常:', error)
+        setIconError(true)
+      }
+    }
+
+    // 监听图标更新事件（异步获取的真实图标）
+    const handleIconUpdate = (data: { path: string; icon: string }) => {
+      if (data.path === item.path) {
+        console.log('前端：收到图标更新事件')
+        setIconSrc(data.icon)
+        setIconError(false)
+      }
+    }
+
+    if (window.electronAPI.onIconUpdated) {
+      window.electronAPI.onIconUpdated(handleIconUpdate)
+    }
+
+    return () => {
+      // 清理事件监听器
+      if (window.electronAPI.removeAllListeners) {
+        window.electronAPI.removeAllListeners('icon-updated')
+      }
+    }
+  }, [item.path, item.type])
+
+  // 如果是应用程序且有图标，显示真实图标
+  if (item.type === 'application' && iconSrc && !iconError) {
+    return (
+      <img
+        src={iconSrc}
+        alt={item.title}
+        onError={() => {
+          console.log('前端：图标加载失败，切换到降级方案')
+          setIconError(true)
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          borderRadius: '0.25rem'
+        }}
+      />
+    )
+  }
+
+  // 降级到emoji图标
+  const getAppIcon = (item: any) => {
+    if (item.type === 'application') {
+      const appName = item.title.toLowerCase()
+
+      // 常见应用程序的图标映射
+      const iconMap: { [key: string]: string } = {
+        'notepad': '📝',
+        'calculator': '🧮',
+        'chrome': '🌐',
+        'firefox': '🦊',
+        'edge': '🌐',
+        'word': '📄',
+        'excel': '📊',
+        'powerpoint': '📊',
+        'outlook': '📧',
+        'vscode': '💻',
+        'visual studio': '💻',
+        'photoshop': '🎨',
+        'steam': '🎮',
+        'discord': '💬',
+        'spotify': '🎵',
+        'vlc': '🎬',
+        'winrar': '📦',
+        '7zip': '📦',
+        'git': '📂'
+      }
+
+      // 查找匹配的图标
+      for (const [key, icon] of Object.entries(iconMap)) {
+        if (appName.includes(key)) {
+          return icon
+        }
+      }
+
+      // 默认应用程序图标
+      return '🚀'
+    }
+    return item.icon || getCategoryIcon(item.category)
+  }
+
+  return <span>{getAppIcon(item)}</span>
+}
+
 const SearchResults: React.FC = () => {
   const { results, selectedIndex, setSelectedIndex, executeSelected } = useSearchStore()
 
-  // 获取类别图标
-  const getCategoryIcon = (category: SearchCategory): string => {
-    switch (category) {
-      case SearchCategory.APPLICATION:
-        return '🚀'
-      case SearchCategory.FILE:
-        return '📄'
-      case SearchCategory.FOLDER:
-        return '📁'
-      case SearchCategory.WEB:
-        return '🌐'
-      case SearchCategory.COMMAND:
-        return '⚡'
-      case SearchCategory.CALCULATOR:
-        return '🧮'
-      case SearchCategory.SYSTEM:
-        return '⚙️'
-      default:
-        return '📋'
-    }
-  }
+
 
   // 获取类别颜色
   const getCategoryColor = (category: SearchCategory): string => {
@@ -61,57 +173,76 @@ const SearchResults: React.FC = () => {
     setSelectedIndex(index)
   }
 
+  // 获取应用程序图标
+  const getAppIcon = (item: any) => {
+    if (item.type === 'application') {
+      // 根据应用程序名称返回对应的图标
+      const appName = item.title.toLowerCase()
+
+      // 常见应用程序的图标映射
+      const iconMap: { [key: string]: string } = {
+        'notepad': '📝',
+        'calculator': '🧮',
+        'chrome': '🌐',
+        'firefox': '🦊',
+        'edge': '🌐',
+        'word': '📄',
+        'excel': '📊',
+        'powerpoint': '📊',
+        'outlook': '📧',
+        'vscode': '💻',
+        'visual studio': '💻',
+        'photoshop': '🎨',
+        'steam': '🎮',
+        'discord': '💬',
+        'spotify': '🎵',
+        'vlc': '🎬',
+        'winrar': '📦',
+        '7zip': '📦',
+        'git': '📂'
+      }
+
+      // 查找匹配的图标
+      for (const [key, icon] of Object.entries(iconMap)) {
+        if (appName.includes(key)) {
+          return icon
+        }
+      }
+
+      // 默认应用程序图标
+      return '🚀'
+    }
+    return item.icon || getCategoryIcon(item.category)
+  }
+
   return (
-    <div className="py-2">
+    <div className="results-grid">
       {results.map((item, index) => (
         <motion.div
           key={item.id}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.2, delay: index * 0.05 }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2, delay: index * 0.03 }}
           className={`result-item ${index === selectedIndex ? 'selected' : ''}`}
           onClick={() => handleItemClick(index)}
           onMouseEnter={() => handleItemHover(index)}
         >
-          <div className="flex items-center space-x-3">
-            {/* 图标 */}
-            <div className="flex-shrink-0 text-lg">
-              {item.icon || getCategoryIcon(item.category)}
+          {/* 图标 */}
+          <div className="result-icon">
+            <AppIcon item={item} />
+          </div>
+
+          {/* 内容 */}
+          <div className="result-content">
+            <div className="result-title">
+              {item.title}
             </div>
-            
-            {/* 内容 */}
-            <div className="flex-1 min-w-0">
-              <div className="result-title">
-                {item.title}
-              </div>
-              <div className="result-description">
-                {item.description}
-              </div>
+            <div className="result-description">
+              {item.description}
             </div>
-            
-            {/* 类别标签 */}
-            <div className={`flex-shrink-0 text-xs px-2 py-1 rounded-full bg-gray-100 ${getCategoryColor(item.category)}`}>
-              {item.category}
-            </div>
-            
-            {/* 分数（开发模式下显示） */}
-            {process.env.NODE_ENV === 'development' && item.score !== undefined && (
-              <div className="flex-shrink-0 text-xs text-gray-400 font-mono">
-                {item.score.toFixed(3)}
-              </div>
-            )}
           </div>
         </motion.div>
       ))}
-      
-      {/* 底部提示 */}
-      <div className="px-6 py-2 text-xs text-gray-400 border-t border-gray-100">
-        <div className="flex justify-between items-center">
-          <span>↑↓ 导航</span>
-          <span>Enter 执行</span>
-          <span>Esc 取消</span>
-        </div>
-      </div>
     </div>
   )
 }

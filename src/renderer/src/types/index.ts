@@ -7,6 +7,8 @@ export interface SearchResultItem {
   description: string
   icon?: string
   category: string
+  type?: 'application' | 'file' | 'folder' | 'calculator' | 'web' | 'system'
+  path?: string
   action: () => void
   score?: number
 }
@@ -46,14 +48,42 @@ export interface AppState {
 }
 
 /**
+ * 应用程序信息
+ */
+export interface ApplicationInfo {
+  name: string
+  path: string
+  icon?: string
+  type: 'application'
+}
+
+/**
+ * 文件信息
+ */
+export interface FileInfo {
+  name: string
+  path: string
+  type: 'file' | 'folder'
+  size?: number
+  modified?: Date
+}
+
+/**
  * Electron API类型
  */
 export interface ElectronAPI {
   quit: () => Promise<void>
   hide: () => Promise<void>
   minimize: () => Promise<void>
+  resizeWindow: (isMenuOpen: boolean) => Promise<void>
+  searchApplications: () => Promise<ApplicationInfo[]>
+  searchFiles: (query: string, maxResults?: number) => Promise<FileInfo[]>
+  getFileIcon: (path: string) => string | null
+  openApplication: (path: string) => Promise<boolean>
+  openFile: (path: string) => Promise<boolean>
   platform: string
   onWindowFocus: (callback: () => void) => void
   onWindowBlur: (callback: () => void) => void
+  onIconUpdated: (callback: (data: { path: string; icon: string }) => void) => void
   removeAllListeners: (channel: string) => void
 }
