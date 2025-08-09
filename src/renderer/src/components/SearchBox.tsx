@@ -136,25 +136,17 @@ const SearchBox: React.FC = () => {
               className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity duration-200 app-logo"
               onClick={handleLogoClick}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <defs>
-                  <linearGradient id="modern-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#667eea" />
-                    <stop offset="100%" stopColor="#764ba2" />
-                  </linearGradient>
-                </defs>
-                {/* 主体闪电 */}
-                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="url(#modern-gradient)" />
-                {/* 内部装饰闪电 */}
-                <path d="M13 4L6 12H11L10.5 18L17 11H12L13 4Z" fill="white" opacity="0.3" />
-                {/* 中心装饰线 */}
-                <rect x="11" y="10" width="2" height="4" fill="white" />
-                {/* 装饰点 */}
-                <circle cx="13" cy="3" r="0.8" fill="white" />
-                <circle cx="11" cy="21" r="0.8" fill="white" />
-                <circle cx="4" cy="14" r="0.6" fill="white" opacity="0.8" />
-                <circle cx="20" cy="10" r="0.6" fill="white" opacity="0.8" />
+              <svg width="24" height="24" viewBox="0 0 233 233" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M126.208 19.4166L29.125 135.917H116.5L106.792 213.583L203.875 97.0833H116.5L126.208 19.4166Z" fill="#8C7AD7"/>
+              <path opacity="0.3" d="M129.287 42.6219L59.6708 119.342H111.054L106.2 177.592L169.304 109.633H120.762L129.287 42.6219Z" fill="#E7E2FF"/>
+              <path d="M126.208 25.5258C130.498 25.5258 133.975 22.0485 133.975 17.7591C133.975 13.4697 130.498 9.99243 126.208 9.99243C121.919 9.99243 118.442 13.4697 118.442 17.7591C118.442 22.0485 121.919 25.5258 126.208 25.5258Z" fill="white"/>
+              <path d="M107.218 220.119C111.507 220.119 114.985 216.641 114.985 212.352C114.985 208.063 111.507 204.585 107.218 204.585C102.928 204.585 99.4512 208.063 99.4512 212.352C99.4512 216.641 102.928 220.119 107.218 220.119Z" fill="white"/>
+              <path opacity="0.8" d="M30.309 141.742C33.5261 141.742 36.134 139.134 36.134 135.917C36.134 132.7 33.5261 130.092 30.309 130.092C27.0919 130.092 24.484 132.7 24.484 135.917C24.484 139.134 27.0919 141.742 30.309 141.742Z" fill="white"/>
+              <path opacity="0.8" d="M202.691 102.908C205.908 102.908 208.516 100.3 208.516 97.0833C208.516 93.8662 205.908 91.2583 202.691 91.2583C199.474 91.2583 196.866 93.8662 196.866 97.0833C196.866 100.3 199.474 102.908 202.691 102.908Z" fill="white"/>
+              <rect x="107.976" y="102.293" width="17.0488" height="28.4146" fill="#D9D9D9"/>
               </svg>
+
+
             </div>
           </div>
 

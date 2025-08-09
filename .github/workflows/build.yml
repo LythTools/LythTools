@@ -1,0 +1,71 @@
+name: Build LythTools
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-24.04, windows-latest, macos-latest ]
+
+    env:
+      # Disable code signing by default (avoid CI prompts)
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+      ELECTRON_CACHE: ${{ runner.temp }}/electron
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer and main
+        run: npm run build
+        timeout-minutes: 20
+
+      # Platform-specific packaging
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: npm run dist:win
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: npm run dist:mac
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: npm run dist:linux
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lythtools-${{ runner.os }}-${{ github.sha }}
+          path: |
+            release/**
+          retention-days: 7
+          if-no-files-found: warn
+
+
