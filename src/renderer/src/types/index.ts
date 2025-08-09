@@ -11,6 +11,7 @@ export interface SearchResultItem {
   path?: string
   action: () => void
   score?: number
+  preventHide?: boolean // 阻止执行后隐藏窗口
 }
 
 /**
@@ -69,6 +70,34 @@ export interface FileInfo {
 }
 
 /**
+ * 扩展清单
+ */
+export interface ExtensionManifest {
+  id: string
+  name: string
+  description: string
+  version: string
+  author: string
+  icon: string
+  category: string
+  permissions: string[]
+  commands: {
+    name: string
+    description: string
+    keywords: string[]
+  }[]
+  settings: {
+    key: string
+    name: string
+    description: string
+    type: 'string' | 'number' | 'boolean' | 'select'
+    default: any
+    options?: { label: string; value: any }[]
+  }[]
+  enabled?: boolean  // 扩展是否已启用（运行时添加）
+}
+
+/**
  * Electron API类型
  */
 export interface ElectronAPI {
@@ -86,4 +115,16 @@ export interface ElectronAPI {
   onWindowBlur: (callback: () => void) => void
   onIconUpdated: (callback: (data: { path: string; icon: string }) => void) => void
   removeAllListeners: (channel: string) => void
+  extensions: {
+    getInstalled: () => Promise<ExtensionManifest[]>
+    getAvailable: () => Promise<ExtensionManifest[]>
+    install: (extensionPath: string) => Promise<{ success: boolean; message: string }>
+    uninstall: (extensionId: string) => Promise<{ success: boolean; message: string }>
+    enable: (extensionId: string) => Promise<{ success: boolean; message: string }>
+    disable: (extensionId: string) => Promise<{ success: boolean; message: string }>
+    getInfo: (extensionId: string) => Promise<ExtensionManifest | null>
+    selectFolder: () => Promise<{ success: boolean; path?: string; message?: string }>
+    replaceFileSearch: (extensionId: string, provider: any) => Promise<{ success: boolean; message: string }>
+    restoreFileSearch: (extensionId: string) => Promise<{ success: boolean; message: string }>
+  }
 }

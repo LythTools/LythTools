@@ -9,6 +9,11 @@ dist/
 release/
 build/
 
+# 扩展
+/extensions
+/everything-search-extension
+/lythtools-extension-template
+
 # Environment variables
 .env.local
 .env.development.local

@@ -1,13 +1,21 @@
 import React, { useEffect } from 'react'
 import SearchBox from './components/SearchBox'
 import { useSearchStore } from './stores/searchStore'
+import { useSettingsStore } from './stores/settingsStore'
 
 const App: React.FC = () => {
-  const { initializeSearch, isMenuOpen, setMenuOpen } = useSearchStore()
+  const { initializeSearch, isMenuOpen, setMenuOpen, results, isEverythingOpen, installedExtensionCount } = useSearchStore()
+  const { initializeTheme, incrementLaunchCount } = useSettingsStore()
 
   useEffect(() => {
     // 初始化搜索功能
     initializeSearch()
+
+    // 初始化主题
+    initializeTheme()
+
+    // 增加启动次数
+    incrementLaunchCount()
 
     // 监听窗口事件
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -30,9 +38,22 @@ const App: React.FC = () => {
     }
   }, [initializeSearch, isMenuOpen, setMenuOpen])
 
+  // 监听菜单状态和搜索结果变化，动态调整窗口大小
+  useEffect(() => {
+    if (window.electronAPI?.resizeWindow) {
+      // 传递详细的状态信息给主进程，让其动态计算窗口高度
+      window.electronAPI.resizeWindow({
+        isMenuOpen: isMenuOpen,
+        resultCount: results.length,
+        isEverythingOpen: isEverythingOpen,
+        installedExtensionCount: installedExtensionCount
+      })
+    }
+  }, [isMenuOpen, results.length, isEverythingOpen, installedExtensionCount])
+
   return (
     <div className="search-container">
-      <div className="w-full max-w-2xl mx-auto px-4">
+      <div className="w-full">
         <SearchBox />
       </div>
     </div>

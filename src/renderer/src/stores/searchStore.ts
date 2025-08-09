@@ -1,6 +1,69 @@
 import { create } from 'zustand'
 import Fuse from 'fuse.js'
 import { SearchResultItem, SearchConfig, SearchCategory, ApplicationInfo, FileInfo } from '../types'
+import { useSettingsStore } from './settingsStore'
+
+// 获取文件图标
+const getFileIcon = (fileName: string, fileType: string): string => {
+  if (fileType === 'folder') return '📁'
+
+  const ext = fileName.toLowerCase().split('.').pop() || ''
+
+  // 文档类型
+  if (['txt', 'doc', 'docx', 'rtf', 'odt'].includes(ext)) return '📄'
+  if (['pdf'].includes(ext)) return '📕'
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return '📊'
+  if (['ppt', 'pptx', 'odp'].includes(ext)) return '📈'
+
+  // 图片类型
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico'].includes(ext)) return '🖼️'
+
+  // 视频类型
+  if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v'].includes(ext)) return '🎬'
+
+  // 音频类型
+  if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(ext)) return '🎵'
+
+  // 压缩包类型
+  if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(ext)) return '📦'
+
+  // 程序类型
+  if (['exe', 'msi', 'app', 'deb', 'dmg', 'pkg'].includes(ext)) return '⚙️'
+
+  // 代码类型
+  if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss', 'less'].includes(ext)) return '💻'
+  if (['py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs'].includes(ext)) return '💻'
+
+  // 配置文件
+  if (['json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg'].includes(ext)) return '⚙️'
+
+  return '📄' // 默认文件图标
+}
+
+// 本地文件搜索（浏览器环境的备用方案）
+const searchLocalFiles = async (query: string): Promise<SearchResultItem[]> => {
+  // 在浏览器环境中，我们无法直接访问文件系统
+  // 这里返回一些示例结果，实际应用中需要通过Electron主进程
+  console.warn('使用本地搜索备用方案')
+
+  const mockResults: SearchResultItem[] = [
+    {
+      id: 'local-1',
+      title: `${query}.txt`,
+      description: '无法访问真实文件系统',
+      category: SearchCategory.FILE,
+      type: 'file',
+      icon: '📄',
+      action: () => {
+        console.log('浏览器环境无法打开文件')
+      }
+    }
+  ]
+
+  return mockResults
+}
+
+const maxResults = 8
 
 interface SearchState {
   query: string
@@ -10,6 +73,13 @@ interface SearchState {
   fuse: Fuse<SearchResultItem> | null
   isMenuOpen: boolean
   applications: ApplicationInfo[]
+  installedExtensionCount: number
+
+  // Everything搜索状态
+  isEverythingOpen: boolean
+  everythingQuery: string
+  everythingResults: SearchResultItem[]
+  everythingSelectedIndex: number
 
   // Actions
   setQuery: (query: string) => void
@@ -17,11 +87,21 @@ interface SearchState {
   setSelectedIndex: (index: number) => void
   setLoading: (loading: boolean) => void
   setMenuOpen: (open: boolean) => void
+  setInstalledExtensionCount: (count: number) => void
+  setEverythingOpen: (open: boolean) => void
+  setEverythingQuery: (query: string) => void
+  setEverythingResults: (results: SearchResultItem[]) => void
+  setEverythingSelectedIndex: (index: number) => void
   search: (query: string) => void
+  searchEverything: (query: string) => void
   executeSelected: () => void
+  executeEverythingSelected: () => void
   navigateUp: () => void
   navigateDown: () => void
+  navigateEverythingUp: () => void
+  navigateEverythingDown: () => void
   clearResults: () => void
+  clearEverythingResults: () => void
   initializeSearch: () => void
   loadApplications: () => Promise<void>
 }
@@ -101,6 +181,13 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   fuse: null,
   isMenuOpen: false,
   applications: [],
+  installedExtensionCount: 0,
+
+  // Everything搜索状态
+  isEverythingOpen: false,
+  everythingQuery: '',
+  everythingResults: [],
+  everythingSelectedIndex: 0,
 
   setQuery: (query: string) => {
     set({ query })
@@ -123,12 +210,43 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   setMenuOpen: (open: boolean) => {
+    console.log(`设置菜单状态: ${open}`)
     set({ isMenuOpen: open })
-    // 不再调整窗口大小，使用固定窗口
+    // 窗口大小调整由App.tsx中的useEffect处理，避免重复调用
+  },
+
+  setInstalledExtensionCount: (count: number) => {
+    console.log(`设置已安装插件数量: ${count}`)
+    set({ installedExtensionCount: count })
+  },
+
+  setEverythingOpen: (open: boolean) => {
+    console.log(`设置Everything搜索状态: ${open}`)
+    set({ isEverythingOpen: open })
+  },
+
+  setEverythingQuery: (query: string) => {
+    set({ everythingQuery: query })
+    // 不在这里调用searchEverything，让EverythingResults组件处理
+  },
+
+  setEverythingResults: (results: SearchResultItem[]) => {
+    set({ everythingResults: results, everythingSelectedIndex: 0 })
+  },
+
+  setEverythingSelectedIndex: (index: number) => {
+    const { everythingResults } = get()
+    if (index >= 0 && index < everythingResults.length) {
+      set({ everythingSelectedIndex: index })
+    }
   },
 
   search: async (query: string) => {
     const { applications } = get()
+
+    // 获取设置中的搜索配置
+    const settings = useSettingsStore.getState().searchSettings
+    const maxResults = settings.maxResults || 8
 
     if (!query.trim()) {
       set({ results: [], selectedIndex: 0 })
@@ -155,6 +273,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
               action: () => {
                 navigator.clipboard.writeText(result.toString())
                 window.electronAPI.hide()
+                // 增加搜索计数
+                useSettingsStore.getState().incrementSearchCount()
               }
             })
           }
@@ -164,30 +284,46 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       }
 
       // 2. 搜索应用程序
-      const appResults = applications
-        .filter(app => app.name.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 5)
-        .map(app => ({
-          id: `app-${app.path}`,
-          title: app.name,
-          description: `应用程序`,
-          category: SearchCategory.APPLICATION,
-          type: 'application' as const,
-          path: app.path,
-          icon: '🚀',
-          action: async () => {
-            const success = await window.electronAPI.openApplication(app.path)
-            if (success) {
-              window.electronAPI.hide()
-            }
-          }
-        }))
+      let appResults = applications
 
-      results.push(...appResults)
+      if (settings.fuzzySearch) {
+        // 使用模糊搜索
+        const fuse = new Fuse(applications, {
+          keys: ['name'],
+          threshold: 0.3
+        })
+        const fuzzyResults = fuse.search(query)
+        appResults = fuzzyResults.map(result => result.item).slice(0, 5)
+      } else {
+        // 使用精确匹配
+        appResults = applications
+          .filter(app => app.name.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 5)
+      }
+
+      const mappedAppResults = appResults.map(app => ({
+        id: `app-${app.path}`,
+        title: app.name,
+        description: `应用程序`,
+        category: SearchCategory.APPLICATION,
+        type: 'application' as const,
+        path: app.path,
+        icon: '🚀',
+        action: async () => {
+          const success = await window.electronAPI.openApplication(app.path)
+          if (success) {
+            window.electronAPI.hide()
+            // 增加搜索计数
+            useSettingsStore.getState().incrementSearchCount()
+          }
+        }
+      }))
+
+      results.push(...mappedAppResults)
 
       // 3. 搜索文件
       if (window.electronAPI.searchFiles) {
-        const files = await window.electronAPI.searchFiles(query, 8)
+        const files = await window.electronAPI.searchFiles(query, Math.max(maxResults - results.length, 3))
         const fileResults = files.map(file => ({
           id: `file-${file.path}`,
           title: file.name,
@@ -200,6 +336,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
             const success = await window.electronAPI.openFile(file.path)
             if (success) {
               window.electronAPI.hide()
+              // 增加搜索计数
+              useSettingsStore.getState().incrementSearchCount()
             }
           }
         }))
@@ -207,7 +345,33 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         results.push(...fileResults)
       }
 
-      // 4. 网络搜索建议
+      // 4. Everything文件搜索 - 总是显示，提供更强大的文件搜索
+      if (query.trim().length > 0) {
+        results.push({
+          id: 'everything-search',
+          title: `🔍 Everything搜索: ${query}`,
+          description: '使用Everything进行深度文件搜索',
+          category: SearchCategory.FILE,
+          type: 'file',
+          icon: '🗂️',
+          preventHide: true, // 添加标记，阻止窗口隐藏
+          action: () => {
+            // 打开Everything搜索下拉菜单
+            set({
+              isEverythingOpen: true,
+              everythingQuery: query,
+              isMenuOpen: false // 关闭普通菜单
+            })
+            // 执行Everything搜索
+            get().searchEverything(query)
+            console.log('打开Everything搜索:', query)
+            // 增加搜索计数
+            useSettingsStore.getState().incrementSearchCount()
+          }
+        })
+      }
+
+      // 5. 网络搜索建议
       if (results.length < 3) {
         results.push({
           id: 'web-search',
@@ -220,14 +384,99 @@ export const useSearchStore = create<SearchState>((set, get) => ({
             const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
             window.electronAPI.openFile(searchUrl)
             window.electronAPI.hide()
+            // 增加搜索计数
+            useSettingsStore.getState().incrementSearchCount()
           }
         })
       }
 
-      set({ results: results.slice(0, 8), selectedIndex: 0, isLoading: false })
+      // 保存搜索历史（如果启用）
+      if (settings.searchHistory && results.length > 0) {
+        useSettingsStore.getState().addSearchHistory(query, results.length)
+      }
+
+      set({ results: results.slice(0, maxResults), selectedIndex: 0, isLoading: false })
     } catch (error) {
       console.error('搜索出错:', error)
       set({ results: [], selectedIndex: 0, isLoading: false })
+    }
+  },
+
+  searchEverything: async (query: string) => {
+    if (!query.trim()) {
+      set({ everythingResults: [], everythingSelectedIndex: 0 })
+      return
+    }
+
+    try {
+      set({ isLoading: true })
+
+      // 优先使用Everything全盘搜索API
+      if (window.electronAPI?.searchEverything) {
+        console.log('使用Everything全盘搜索:', query)
+
+        // 使用新的Everything API进行全盘搜索
+        const files = await window.electronAPI.searchEverything(query, 100)
+
+        const fileResults: SearchResultItem[] = files.map(file => ({
+          id: `everything-${file.path}`,
+          title: file.name,
+          description: file.path,
+          category: file.type === 'folder' ? SearchCategory.FOLDER : SearchCategory.FILE,
+          type: file.type as 'file' | 'folder',
+          path: file.path,
+          icon: getFileIcon(file.name, file.type),
+          action: async () => {
+            try {
+              await window.electronAPI.openFile(file.path)
+              console.log('打开成功:', file.path)
+              // 关闭Everything搜索界面并隐藏窗口
+              set({ isEverythingOpen: false, everythingResults: [], everythingQuery: '' })
+              window.electronAPI.hide()
+            } catch (error) {
+              console.error('打开失败:', error)
+            }
+          }
+        }))
+
+        console.log(`Everything搜索完成，找到 ${fileResults.length} 个文件`)
+        set({ everythingResults: fileResults, everythingSelectedIndex: 0, isLoading: false })
+      } else if (window.electronAPI?.searchFiles) {
+        console.log('Everything API不可用，降级到基础文件搜索:', query)
+
+        // 降级到基础文件搜索
+        const files = await window.electronAPI.searchFiles(query, 100)
+
+        const fileResults: SearchResultItem[] = files.map(file => ({
+          id: `file-${file.path}`,
+          title: file.name,
+          description: file.path,
+          category: file.type === 'folder' ? SearchCategory.FOLDER : SearchCategory.FILE,
+          type: file.type as 'file' | 'folder',
+          path: file.path,
+          icon: getFileIcon(file.name, file.type),
+          action: async () => {
+            try {
+              await window.electronAPI.openFile(file.path)
+              console.log('打开成功:', file.path)
+            } catch (error) {
+              console.error('打开失败:', error)
+            }
+          }
+        }))
+
+        console.log(`基础搜索找到 ${fileResults.length} 个文件`)
+        set({ everythingResults: fileResults, everythingSelectedIndex: 0, isLoading: false })
+      } else {
+        console.warn('所有文件搜索API都不可用，使用本地搜索')
+
+        // 如果所有API都不可用，使用本地搜索
+        const localResults = await searchLocalFiles(query)
+        set({ everythingResults: localResults, everythingSelectedIndex: 0, isLoading: false })
+      }
+    } catch (error) {
+      console.error('Everything搜索出错:', error)
+      set({ everythingResults: [], everythingSelectedIndex: 0, isLoading: false })
     }
   },
 
@@ -237,8 +486,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
     if (selectedItem) {
       selectedItem.action()
-      // 执行后隐藏窗口
-      window.electronAPI?.hide()
+      // 只有在没有preventHide标记时才隐藏窗口
+      if (!selectedItem.preventHide) {
+        window.electronAPI?.hide()
+      }
     }
   },
 
@@ -260,6 +511,35 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
   clearResults: () => {
     set({ results: [], selectedIndex: 0, query: '' })
+  },
+
+  executeEverythingSelected: () => {
+    const { everythingResults, everythingSelectedIndex } = get()
+    const selectedItem = everythingResults[everythingSelectedIndex]
+
+    if (selectedItem) {
+      selectedItem.action()
+    }
+  },
+
+  navigateEverythingUp: () => {
+    const { everythingSelectedIndex, everythingResults } = get()
+    if (everythingResults.length > 0) {
+      const newIndex = everythingSelectedIndex > 0 ? everythingSelectedIndex - 1 : everythingResults.length - 1
+      set({ everythingSelectedIndex: newIndex })
+    }
+  },
+
+  navigateEverythingDown: () => {
+    const { everythingSelectedIndex, everythingResults } = get()
+    if (everythingResults.length > 0) {
+      const newIndex = everythingSelectedIndex < everythingResults.length - 1 ? everythingSelectedIndex + 1 : 0
+      set({ everythingSelectedIndex: newIndex })
+    }
+  },
+
+  clearEverythingResults: () => {
+    set({ everythingResults: [], everythingSelectedIndex: 0, everythingQuery: '', isEverythingOpen: false })
   },
 
   initializeSearch: async () => {

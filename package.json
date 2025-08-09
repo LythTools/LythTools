@@ -1,19 +1,19 @@
 {
   "name": "lythtools",
   "version": "1.0.0",
-  "description": "一个类似Wox的Electron搜索工具",
+  "description": "我要对标utools！！！",
   "main": "dist/main/main.js",
   "type": "module",
   "homepage": "./",
   "scripts": {
-    "dev": "concurrently \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:main\"",
+    "dev": "concurrently \"npm run dev:renderer\" \"wait-on http://localhost:5174 && npm run build:preload && npm run dev:main\"",
     "dev:renderer": "vite",
     "dev:main": "cross-env NODE_ENV=development electron .",
-    "build": "npm run build:renderer && npm run build:main",
+    "build": "npm run build:renderer && npm run build:main && npm run build:preload",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
-    "build:preload": "tsc src/preload/preload.ts --outDir dist/preload --target ES2020 --module CommonJS --moduleResolution node",
-    "compile": "npm run build && npm run build:preload",
+    "build:preload": "tsc src/preload/preload.ts --outDir dist/preload --target ES2020 --module CommonJS --moduleResolution node --esModuleInterop",
+    "compile": "npm run build",
     "pack": "npm run compile && electron-builder --dir",
     "dist": "npm run compile && electron-builder",
     "dist:win": "npm run compile && electron-builder --win",
@@ -33,7 +33,7 @@
     "launcher",
     "wox"
   ],
-  "author": "LythTools",
+  "author": "Lythrilla",
   "license": "MIT",
   "dependencies": {
     "electron-store": "^10.1.0",

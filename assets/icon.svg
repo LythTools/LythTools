@@ -1,0 +1,26 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="modern-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea" />
+      <stop offset="100%" stop-color="#764ba2" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="128" cy="128" r="120" fill="url(#modern-gradient)" />
+  
+  <!-- 主体闪电 -->
+  <path d="M138.67 42.67L64 149.33H128L117.33 213.33L192 106.67H128L138.67 42.67Z" fill="white" />
+  
+  <!-- 内部装饰闪电 -->
+  <path d="M138.67 64L85.33 128H117.33L112 181.33L165.33 117.33H133.33L138.67 64Z" fill="white" opacity="0.3" />
+  
+  <!-- 中心装饰线 -->
+  <rect x="117.33" y="106.67" width="21.33" height="42.67" fill="white" />
+  
+  <!-- 装饰点 -->
+  <circle cx="138.67" cy="53.33" r="8.53" fill="white" />
+  <circle cx="117.33" cy="202.67" r="8.53" fill="white" />
+  <circle cx="74.67" cy="149.33" r="6.4" fill="white" opacity="0.8" />
+  <circle cx="181.33" cy="106.67" r="6.4" fill="white" opacity="0.8" />
+</svg>
