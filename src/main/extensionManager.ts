@@ -1,9 +1,9 @@
-import { join, dirname, basename } from 'path'
+import { join } from 'path'
 import { promises as fs, existsSync } from 'fs'
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { promisify } from 'util'
-import { exec } from 'child_process'
-import { pathToFileURL } from 'url'
+import { exec, spawn, ChildProcessWithoutNullStreams } from 'child_process'
+import { EventEmitter } from 'events'
 
 const execAsync = promisify(exec)
 
@@ -36,6 +36,14 @@ export interface ExtensionManifest {
   engines?: {
     lythtools: string
   }
+  // 新增：外部进程入口（多语言支持）
+  entry?: {
+    type: 'process'
+    command: string
+    args?: string[]
+    cwd?: string
+    env?: Record<string, string>
+  }
 }
 
 /**
@@ -45,8 +53,42 @@ export interface InstalledExtension {
   manifest: ExtensionManifest
   path: string
   enabled: boolean
-  instance?: any
-  fileSearchProvider?: (query: string) => Promise<any[]>
+}
+
+// 扩展贡献（供渲染端展示/交互）
+export interface ExtensionContributions {
+  listItems?: Array<{
+    id: string
+    title: string
+    description?: string
+    icon?: string
+    command?: string
+    args?: any
+  }>
+  menus?: Array<{
+    id: string
+    label: string
+    parent?: string // e.g. 'root' | 'search-dropdown'
+    command?: string
+    args?: any
+  }>
+  windows?: Array<{
+    id: string
+    title: string
+    // 扩展可以提供文件路径(相对扩展目录)或URL
+    url?: string
+    file?: string
+    width?: number
+    height?: number
+  }>
+}
+
+interface ExternalProcessState {
+  child: ChildProcessWithoutNullStreams
+  ready: boolean
+  buffer: string
+  contributions: ExtensionContributions
+  lastHeartbeatAt: number
 }
 
 /**
@@ -56,8 +98,8 @@ export class ExtensionManager {
   private extensionsDir: string
   private installedExtensions = new Map<string, InstalledExtension>()
   private enabledExtensions = new Set<string>()
-  private originalFileSearchProvider: ((query: string, maxResults?: number) => Promise<any[]>) | null = null
-  private currentFileSearchProvider: ((query: string, maxResults?: number) => Promise<any[]>) | null = null
+  private processes = new Map<string, ExternalProcessState>()
+  private events = new EventEmitter()
 
   constructor() {
     // 扩展安装目录
@@ -112,33 +154,36 @@ export class ExtensionManager {
    */
   private async loadExtension(extensionPath: string): Promise<void> {
     try {
-      const packageJsonPath = join(extensionPath, 'package.json')
-
-      if (!existsSync(packageJsonPath)) {
-        console.warn(`扩展目录缺少package.json: ${extensionPath}`)
-        return
-      }
-
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-
-      if (!packageJson.lythtools) {
-        console.warn(`无效的LythTools扩展: ${extensionPath}`)
-        return
-      }
-
-      const manifest: ExtensionManifest = {
-        ...packageJson.lythtools,
-        main: packageJson.main || 'dist/index.js'
+      // 仅支持 manifest.json（进程型扩展），兼容 package.json -> lythtools 作为降级读取清单
+      const manifestJsonPath = join(extensionPath, 'manifest.json')
+      let manifest: ExtensionManifest | null = null
+      if (existsSync(manifestJsonPath)) {
+        manifest = JSON.parse(await fs.readFile(manifestJsonPath, 'utf-8'))
+      } else {
+        const packageJsonPath = join(extensionPath, 'package.json')
+        if (!existsSync(packageJsonPath)) {
+          console.warn(`扩展目录缺少 manifest.json（或兼容的 package.json）: ${extensionPath}`)
+          return
+        }
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
+        if (!packageJson.lythtools) {
+          console.warn(`无效的LythTools扩展: ${extensionPath}`)
+          return
+        }
+        manifest = {
+          ...packageJson.lythtools,
+          main: packageJson.main || undefined
+        }
       }
 
       const extension: InstalledExtension = {
-        manifest,
+        manifest: manifest!,
         path: extensionPath,
         enabled: false
       }
 
-      this.installedExtensions.set(manifest.id, extension)
-      console.log(`已加载扩展: ${manifest.name} (${manifest.id})`)
+      this.installedExtensions.set(manifest!.id, extension)
+      console.log(`已加载扩展: ${manifest!.name} (${manifest!.id})`)
     } catch (error) {
       console.error(`加载扩展失败 ${extensionPath}:`, error)
     }
@@ -189,42 +234,34 @@ export class ExtensionManager {
     try {
       console.log(`开始安装扩展: ${extensionPath}`)
 
-      // 检查是否为有效的扩展包
-      const packageJsonPath = join(extensionPath, 'package.json')
-      if (!existsSync(packageJsonPath)) {
-        return { success: false, message: '无效的扩展包：缺少package.json文件' }
+      // 优先使用 manifest.json
+      let id: string | null = null
+      const manifestJsonPath = join(extensionPath, 'manifest.json')
+      if (existsSync(manifestJsonPath)) {
+        const manifest = JSON.parse(await fs.readFile(manifestJsonPath, 'utf-8'))
+        id = manifest.id
+      } else if (existsSync(join(extensionPath, 'package.json'))) {
+        const pkg = JSON.parse(await fs.readFile(join(extensionPath, 'package.json'), 'utf-8'))
+        id = pkg?.lythtools?.id
       }
-
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-      if (!packageJson.lythtools) {
-        return { success: false, message: '无效的扩展包：缺少lythtools配置' }
+      if (!id) {
+        return { success: false, message: '无效的扩展包：缺少 manifest.json 或 lythtools.id' }
       }
-
-      const manifest = packageJson.lythtools
-      const targetPath = join(this.extensionsDir, manifest.id)
+      const targetPath = join(this.extensionsDir, id)
 
       // 检查是否已安装
-      if (this.installedExtensions.has(manifest.id)) {
+      if (this.installedExtensions.has(id)) {
         return { success: false, message: '扩展已安装，请先卸载旧版本' }
       }
 
       // 复制扩展文件
       await this.copyDirectory(extensionPath, targetPath)
 
-      // 安装依赖（如果有package.json）
-      if (existsSync(join(targetPath, 'package.json'))) {
-        try {
-          await execAsync('npm install --production', { cwd: targetPath })
-        } catch (error) {
-          console.warn('安装扩展依赖失败:', error)
-        }
-      }
-
       // 加载扩展
       await this.loadExtension(targetPath)
 
-      console.log(`扩展安装成功: ${manifest.name}`)
-      return { success: true, message: `扩展 "${manifest.name}" 安装成功` }
+      console.log(`扩展安装成功: ${id}`)
+      return { success: true, message: `扩展 "${id}" 安装成功` }
     } catch (error) {
       console.error('安装扩展失败:', error)
       return { success: false, message: `安装失败: ${error instanceof Error ? error.message : String(error)}` }
@@ -274,7 +311,7 @@ export class ExtensionManager {
         return { success: false, message: '扩展已启用' }
       }
 
-      // 实际激活扩展实例
+      // 实际激活扩展实例/进程
       await this.activateExtension(extension)
 
       this.enabledExtensions.add(extensionId)
@@ -302,8 +339,8 @@ export class ExtensionManager {
         return { success: false, message: '扩展未启用' }
       }
 
-      // TODO: 实际停用扩展实例
-      // 这里需要调用扩展的deactivate函数
+      // 停止外部进程
+      await this.terminateExternalProcess(extensionId)
 
       this.enabledExtensions.delete(extensionId)
       await this.saveEnabledExtensions()
@@ -352,50 +389,11 @@ export class ExtensionManager {
     }
   }
 
-  /**
-   * 设置原始文件搜索提供者
-   */
-  setOriginalFileSearchProvider(provider: (query: string, maxResults?: number) => Promise<any[]>): void {
-    this.originalFileSearchProvider = provider
-    this.currentFileSearchProvider = provider
-  }
-
-  /**
-   * 替换文件搜索提供者
-   */
-  replaceFileSearchProvider(extensionId: string, provider: (query: string, maxResults?: number) => Promise<any[]>): boolean {
-    const extension = this.installedExtensions.get(extensionId)
-    if (!extension || !this.enabledExtensions.has(extensionId)) {
-      return false
-    }
-
-    extension.fileSearchProvider = provider
-    this.currentFileSearchProvider = provider
-    console.log(`文件搜索提供者已被扩展 ${extensionId} 替换`)
-    return true
-  }
-
-  /**
-   * 恢复原始文件搜索提供者
-   */
-  restoreFileSearchProvider(extensionId: string): boolean {
-    const extension = this.installedExtensions.get(extensionId)
-    if (!extension) {
-      return false
-    }
-
-    extension.fileSearchProvider = undefined
-    this.currentFileSearchProvider = this.originalFileSearchProvider
-    console.log(`文件搜索提供者已恢复为原始提供者`)
-    return true
-  }
-
-  /**
-   * 获取当前文件搜索提供者
-   */
-  getCurrentFileSearchProvider(): ((query: string, maxResults?: number) => Promise<any[]>) | null {
-    return this.currentFileSearchProvider
-  }
+  // 旧的文件搜索Provider能力已移除（迁移至外部扩展进程协议）
+  setOriginalFileSearchProvider(_provider: (query: string, maxResults?: number) => Promise<any[]>): void {}
+  replaceFileSearchProvider(_extensionId: string, _provider: (query: string, maxResults?: number) => Promise<any[]>): boolean { return false }
+  restoreFileSearchProvider(_extensionId: string): boolean { return true }
+  getCurrentFileSearchProvider(): ((query: string, maxResults?: number) => Promise<any[]>) | null { return null }
 
   /**
    * 激活已启用的扩展
@@ -419,33 +417,11 @@ export class ExtensionManager {
    */
   private async activateExtension(extension: InstalledExtension): Promise<void> {
     try {
-      const extensionPath = join(extension.path, 'dist', 'index.js')
-      if (!existsSync(extensionPath)) {
-        throw new Error(`扩展主文件不存在: ${extensionPath}`)
+      // 仅支持进程型扩展
+      if (extension.manifest.entry?.type !== 'process') {
+        throw new Error('扩展缺少进程入口（entry.type=process）')
       }
-
-      // 动态加载扩展模块（兼容 ESM/CJS）
-      const fileUrl = pathToFileURL(extensionPath).href
-      const importedModule: any = await import(fileUrl)
-      const extensionModule: any = importedModule?.default ?? importedModule
-
-      if (!extensionModule || typeof extensionModule.activate !== 'function') {
-        throw new Error('扩展缺少activate函数')
-      }
-
-      // 创建扩展上下文
-      const context = this.createExtensionContext(extension)
-
-      // 激活扩展
-      const extensionInstance = extensionModule.activate(context)
-      if (extensionInstance && typeof extensionInstance.activate === 'function') {
-        await extensionInstance.activate()
-      }
-
-      // 保存扩展实例
-      extension.instance = extensionInstance
-
-      console.log(`扩展实例激活成功: ${extension.manifest.name}`)
+      await this.spawnExternalProcess(extension)
     } catch (error) {
       console.error(`激活扩展实例失败: ${extension.manifest.name}`, error)
       throw error
@@ -456,7 +432,7 @@ export class ExtensionManager {
    * 创建扩展上下文
    */
   private createExtensionContext(extension: InstalledExtension): any {
-    const extensionId = extension.manifest.name.toLowerCase().replace(/\s+/g, '-')
+    const extensionId = extension.manifest.id
 
     return {
       extension: {
@@ -479,22 +455,8 @@ export class ExtensionManager {
       },
 
       search: {
-        registerProvider: (provider: Function) => {
-          console.log(`扩展 ${extensionId} 注册搜索提供者`)
-        },
-        unregisterProvider: (provider: Function) => {
-          console.log(`扩展 ${extensionId} 注销搜索提供者`)
-        },
         addResult: (result: any) => {
-          console.log(`扩展 ${extensionId} 添加搜索结果:`, result.title)
-        },
-        replaceFileSearch: (provider: (query: string, maxResults?: number) => Promise<any[]>) => {
-          console.log(`扩展 ${extensionId} 替换文件搜索提供者`)
-          this.replaceFileSearchProvider(extensionId, provider)
-        },
-        restoreFileSearch: () => {
-          console.log(`扩展 ${extensionId} 恢复文件搜索提供者`)
-          this.restoreFileSearchProvider(extensionId)
+          console.log(`扩展 ${extensionId} 添加搜索结果:`, result?.title)
         }
       },
 
@@ -546,6 +508,160 @@ export class ExtensionManager {
           console.debug(`[${extensionId}] [DEBUG]`, message, ...args)
         }
       }
+    }
+  }
+
+  // 启动外部进程扩展
+  private async spawnExternalProcess(extension: InstalledExtension): Promise<void> {
+    const entry = extension.manifest.entry!
+    const cwd = entry.cwd || extension.path
+    const env = { ...process.env, ...(entry.env || {}) }
+    console.log(`[${extension.manifest.id}] 启动外部进程: ${entry.command} ${(entry.args || []).join(' ')}`)
+    const child = spawn(entry.command, entry.args || [], { cwd, env, shell: true })
+    const state: ExternalProcessState = {
+      child,
+      ready: false,
+      buffer: '',
+      contributions: {},
+      lastHeartbeatAt: Date.now(),
+    }
+    this.processes.set(extension.manifest.id, state)
+
+    const send = (msg: any) => {
+      try {
+        child.stdin.write(JSON.stringify(msg) + '\n')
+      } catch (e) {
+        console.error(`[${extension.manifest.id}] 发送消息失败`, e)
+      }
+    }
+
+    const handleLine = (line: string) => {
+      if (!line.trim()) return
+      try {
+        const msg = JSON.parse(line)
+        // 简单协议处理
+        if (msg.type === 'ready') {
+          state.ready = true
+          // 发送初始化
+          send({
+            type: 'init',
+            apiVersion: 1,
+            extensionId: extension.manifest.id,
+            host: { version: app.getVersion() },
+            paths: { extensionPath: extension.path, userData: app.getPath('userData') }
+          })
+          return
+        }
+        if (msg.type === 'heartbeat') {
+          state.lastHeartbeatAt = Date.now()
+          return
+        }
+        if (msg.type === 'register' || msg.type === 'update') {
+          const contrib: ExtensionContributions = msg.contributions || {}
+          state.contributions = {
+            listItems: contrib.listItems || state.contributions.listItems || [],
+            menus: contrib.menus || state.contributions.menus || [],
+            windows: contrib.windows || state.contributions.windows || [],
+          }
+          this.events.emit('contributions-changed', extension.manifest.id, state.contributions)
+          return
+        }
+        if (msg.type === 'log') {
+          const level = msg.level || 'info'
+          console[level]?.(`[${extension.manifest.id}]`, msg.message)
+          return
+        }
+      } catch (e) {
+        console.error(`[${extension.manifest.id}] 解析消息失败:`, line)
+      }
+    }
+
+    child.stdout.setEncoding('utf-8')
+    child.stdout.on('data', (chunk) => {
+      state.buffer += chunk
+      let idx
+      while ((idx = state.buffer.indexOf('\n')) >= 0) {
+        const line = state.buffer.slice(0, idx)
+        state.buffer = state.buffer.slice(idx + 1)
+        handleLine(line)
+      }
+    })
+    child.stderr.setEncoding('utf-8')
+    child.stderr.on('data', (data) => {
+      console.error(`[${extension.manifest.id}] STDERR:`, data.trim())
+    })
+    child.on('exit', (code) => {
+      console.warn(`[${extension.manifest.id}] 进程退出, code=${code}`)
+      this.processes.delete(extension.manifest.id)
+      this.events.emit('process-exited', extension.manifest.id, code)
+    })
+  }
+
+  // 停止外部进程扩展
+  private async terminateExternalProcess(extensionId: string): Promise<void> {
+    const state = this.processes.get(extensionId)
+    if (!state) return
+    try {
+      state.child.kill()
+    } catch (e) {
+      console.error(`[${extensionId}] 终止进程失败`, e)
+    }
+    this.processes.delete(extensionId)
+  }
+
+  // 获取扩展贡献（提供给渲染端）
+  public getContributions(): Record<string, ExtensionContributions> {
+    const result: Record<string, ExtensionContributions> = {}
+    for (const [id, state] of this.processes.entries()) {
+      result[id] = state.contributions || {}
+    }
+    return result
+  }
+
+  // 订阅贡献变化
+  public onContributionsChanged(handler: (extensionId: string, contrib: ExtensionContributions) => void): void {
+    this.events.on('contributions-changed', handler)
+  }
+
+  // 执行扩展命令（通过stdin向外部进程发送）
+  public async executeCommand(extensionId: string, command: string, args?: any): Promise<boolean> {
+    const state = this.processes.get(extensionId)
+    if (!state) return false
+    try {
+      state.child.stdin.write(JSON.stringify({ type: 'command', command, args }) + '\n')
+      return true
+    } catch (e) {
+      console.error(`[${extensionId}] 发送命令失败:`, e)
+      return false
+    }
+  }
+
+  // 打开扩展窗口（根据 contributions.windows 定义）
+  public async openExtensionWindow(extensionId: string, windowId: string): Promise<boolean> {
+    const state = this.processes.get(extensionId)
+    const ext = this.installedExtensions.get(extensionId)
+    if (!state || !ext) return false
+    const winDef = state.contributions.windows?.find(w => w.id === windowId)
+    if (!winDef) return false
+    try {
+      const bw = new BrowserWindow({
+        width: winDef.width || 900,
+        height: winDef.height || 600,
+        title: winDef.title || `${ext.manifest.name}`,
+        webPreferences: { contextIsolation: true, nodeIntegration: false }
+      })
+      if (winDef.url) {
+        await bw.loadURL(winDef.url)
+      } else if (winDef.file) {
+        const filePath = join(ext.path, winDef.file)
+        await bw.loadFile(filePath)
+      } else {
+        return false
+      }
+      return true
+    } catch (e) {
+      console.error(`[${extensionId}] 打开扩展窗口失败:`, e)
+      return false
     }
   }
 }

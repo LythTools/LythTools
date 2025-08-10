@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchStore } from '../stores/searchStore'
 import { useTray } from '../hooks/useTray'
 import SearchResults from './SearchResults'
-import EverythingResults from './EverythingResults'
+// EverythingResults 已移除
 import MenuView from './MenuView'
 
 const SearchBox: React.FC = () => {
@@ -13,19 +13,17 @@ const SearchBox: React.FC = () => {
     results,
     isLoading,
     isMenuOpen,
-    isEverythingOpen,
-    everythingQuery,
+    // Everything 相关已移除
     setQuery,
     setMenuOpen,
-    setEverythingQuery,
+    
     executeSelected,
-    executeEverythingSelected,
+    
     navigateUp,
     navigateDown,
-    navigateEverythingUp,
-    navigateEverythingDown,
+    
     clearResults,
-    clearEverythingResults
+    
   } = useSearchStore()
 
   // 托盘功能
@@ -40,31 +38,8 @@ const SearchBox: React.FC = () => {
     updateTrayIcon(true)
   }, [updateTrayIcon])
 
-  // 处理键盘事件
+  // 处理键盘事件（去除 Everything 分支）
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    // 如果Everything搜索打开，优先处理Everything的键盘事件
-    if (isEverythingOpen) {
-      switch (event.key) {
-        case 'Enter':
-          event.preventDefault()
-          executeEverythingSelected()
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          navigateEverythingUp()
-          break
-        case 'ArrowDown':
-          event.preventDefault()
-          navigateEverythingDown()
-          break
-        case 'Escape':
-          event.preventDefault()
-          clearEverythingResults()
-          break
-      }
-      return
-    }
-
     // 普通搜索的键盘事件
     switch (event.key) {
       case 'Enter':
@@ -97,16 +72,11 @@ const SearchBox: React.FC = () => {
     }
   }
 
-  // 处理输入变化
+  // 处理输入变化（去除 Everything 分支）
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = event.target.value
 
-    // 如果Everything搜索打开，设置everythingQuery
-    if (isEverythingOpen) {
-      setEverythingQuery(newQuery)
-    } else {
-      setQuery(newQuery)
-    }
+    setQuery(newQuery)
 
     // 如果用户开始输入，自动关闭设置菜单
     if (newQuery.length > 0 && isMenuOpen) {
@@ -154,10 +124,10 @@ const SearchBox: React.FC = () => {
           <input
             ref={inputRef}
             type="text"
-            value={isEverythingOpen ? everythingQuery : query}
+             value={query}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={isEverythingOpen ? "Everything 搜索全盘文件..." : "搜索应用、文件或执行计算..."}
+             placeholder={"搜索应用、文件或执行计算..."}
             className="search-input-with-logo text-select"
             autoComplete="off"
             spellCheck={false}
@@ -188,7 +158,7 @@ const SearchBox: React.FC = () => {
 
       {/* 搜索结果 */}
       <AnimatePresence>
-        {results.length > 0 && !isMenuOpen && !isEverythingOpen && (
+        {results.length > 0 && !isMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -198,13 +168,6 @@ const SearchBox: React.FC = () => {
           >
             <SearchResults />
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Everything搜索结果 */}
-      <AnimatePresence>
-        {isEverythingOpen && (
-          <EverythingResults />
         )}
       </AnimatePresence>
 

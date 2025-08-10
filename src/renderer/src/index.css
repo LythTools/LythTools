@@ -1740,12 +1740,8 @@ input:checked+.slider:before {
   border-color: rgba(59, 130, 246, 0.5);
 }
 
-/* Everything搜索页面样式 */
-.everything-container {
-  padding: 1.5rem;
-  max-height: 100%;
-  overflow-y: auto;
-}
+/* Everything 功能已移除：保留空选择器避免残留引用 */
+.everything-container {}
 
 .everything-header {
   margin-bottom: 1.5rem;
@@ -1943,26 +1939,7 @@ input:checked+.slider:before {
   font-family: monospace;
 }
 
-/* Everything搜索界面样式 */
-.everything-container {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 0.5rem;
-  background: var(--bg-primary);
-  backdrop-filter: blur(12px);
-  border-radius: 0.75rem;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-  z-index: 1001;
-  height: 600px;
-  max-height: 600px;
-  min-height: 600px;
-  display: flex;
-  flex-direction: column;
-}
+/* Everything 功能已移除 */
 
 /* Everything顶部状态栏 */
 .everything-header {

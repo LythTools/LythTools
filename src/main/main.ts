@@ -1,5 +1,4 @@
 import { app, BrowserWindow, globalShortcut, screen, ipcMain, shell, nativeImage, dialog } from 'electron'
-import Store from 'electron-store'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { promises as fs, existsSync } from 'fs'
@@ -30,9 +29,7 @@ let currentHotkeys: {
   fileSearch?: string
 } = {}
 
-// 设置存储
-// 某些版本类型声明差异，此处使用 any 以避免编译器不识别 get/set
-const settingsStore: any = new (Store as any)()
+
 
 // 标志位，用于区分程序化调整和用户手动调整
 let isResizing = false
@@ -206,6 +203,13 @@ app.whenReady().then(async () => {
   extensionManager.setOriginalFileSearchProvider(originalFileSearch)
   await extensionManager.initialize()
 
+  // 将扩展贡献变更转发到渲染进程
+  extensionManager.onContributionsChanged((extId, contributions) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('extensions-contributions-changed', { extensionId: extId, contributions })
+    }
+  })
+
   // 针对macOS的特殊处理
   app.on('activate', () => {
     console.log('主进程: 激活应用...')
@@ -262,7 +266,6 @@ ipcMain.handle('window-minimize', () => {
 ipcMain.handle('window-resize', (_event, options: { 
   isMenuOpen?: boolean
   resultCount?: number
-  isEverythingOpen?: boolean
   targetHeight?: number
   installedExtensionCount?: number
 }) => {
@@ -275,9 +278,6 @@ ipcMain.handle('window-resize', (_event, options: {
     } else if (options.isMenuOpen) {
       // 菜单打开时使用固定高度
       newHeight = 800
-    } else if (options.isEverythingOpen) {
-      // Everything搜索打开时使用更大高度
-      newHeight = 600
     } else if (options.resultCount && options.resultCount > 0) {
       // 根据搜索结果数量动态计算高度（网格布局）
       const baseHeight = 80 // 搜索框基础高度
@@ -329,10 +329,9 @@ ipcMain.handle('window-resize', (_event, options: {
       isResizing = false
     }, 100)
 
-         console.log(`主进程: 窗口大小调整为 ${currentWidth}x${newHeight}`, {
+     console.log(`主进程: 窗口大小调整为 ${currentWidth}x${newHeight}`, {
        resultCount: options.resultCount,
        isMenuOpen: options.isMenuOpen,
-       isEverythingOpen: options.isEverythingOpen,
        installedExtensionCount: options.installedExtensionCount
      })
   }
@@ -393,7 +392,7 @@ async function searchApplicationsInPath(dirPath: string, applications: Applicati
       const fullPath = join(dirPath, item.name)
 
       if (item.isFile() && (item.name.endsWith('.exe') || item.name.endsWith('.lnk'))) {
-        const name = item.name.replace(/\.(exe|lnk)$/, '')
+        const name = item.name.replace(/\.(exe|lnk)$/i, '')
 
         // 尝试获取应用程序图标
         let iconPath: string | undefined = undefined
@@ -422,118 +421,13 @@ async function searchApplicationsInPath(dirPath: string, applications: Applicati
   }
 }
 
-// Everything全盘搜索函数
-async function everythingFileSearch(query: string, maxResults = 100): Promise<FileInfo[]> {
-  const files: FileInfo[] = []
-
-  try {
-    if (process.platform === 'win32') {
-      // 优先读取用户配置路径，其次尝试常见安装路径
-      const configuredPath = settingsStore.get('everythingPath')
-      const everythingPath = configuredPath || 'C:\\\Program Files\\\Everything\\\Everything.exe'
-      
-      // 检查Everything是否存在
-      if (!existsSync(everythingPath)) {
-        console.warn('Everything未安装或未配置，使用原始搜索')
-        return await originalFileSearch(query, maxResults)
-      }
-
-      // 创建临时文件来存储搜索结果
-      const tempFile = join(process.env.TEMP || 'C:\\temp', `lythtools_search_${Date.now()}.csv`)
-      
-      // 使用Everything命令行进行全盘搜索
-      const searchCommand = `"${everythingPath}" -create-file-list "${tempFile}" -search "${query}" -max-results ${maxResults}`
-      
-      console.log('执行Everything搜索:', searchCommand)
-      
-      try {
-        await execAsync(searchCommand, { timeout: 10000 })
-        
-        // 读取搜索结果
-        if (existsSync(tempFile)) {
-          const csvContent = await fs.readFile(tempFile, 'utf-8')
-          const lines = csvContent.split(/\r?\n/).slice(1) // 跳过CSV头部
-          
-          for (const line of lines) {
-            if (files.length >= maxResults) break
-            if (!line.trim()) continue
-            
-            // 简易 CSV 解析：按引号包裹列拆分，避免路径/名称中的逗号
-            const columns: string[] = []
-            let current = ''
-            let inQuotes = false
-            for (let i = 0; i < line.length; i++) {
-              const ch = line[i]
-              if (ch === '"') {
-                // 处理转义双引号
-                if (inQuotes && line[i + 1] === '"') {
-                  current += '"'
-                  i++
-                } else {
-                  inQuotes = !inQuotes
-                }
-              } else if (ch === ',' && !inQuotes) {
-                columns.push(current)
-                current = ''
-              } else {
-                current += ch
-              }
-            }
-            columns.push(current)
-
-            if (columns.length >= 2) {
-              const fileName = columns[0].replace(/^"|"$/g, '')
-              const filePath = columns[1].replace(/^"|"$/g, '')
-              const fileSize = columns[2] ? parseInt(columns[2].replace(/^"|"$/g, '')) : undefined
-              
-              if (fileName && filePath) {
-                try {
-                  const stats = await fs.stat(filePath)
-                  files.push({
-                    name: fileName,
-                    path: filePath,
-                    type: stats.isDirectory() ? 'folder' : 'file',
-                    size: stats.isFile() ? stats.size : undefined,
-                    modified: stats.mtime
-                  })
-                } catch (statError) {
-                  // 文件可能已被删除，继续处理下一个
-                  console.warn('无法访问文件:', filePath)
-                }
-              }
-            }
-          }
-          
-          // 清理临时文件
-          await fs.unlink(tempFile).catch(() => {})
-          
-          console.log(`Everything搜索完成，找到 ${files.length} 个结果`)
-        }
-      } catch (cmdError) {
-        console.error('Everything搜索命令执行失败:', cmdError)
-        // 降级到原始搜索
-        return await originalFileSearch(query, maxResults)
-      }
-    } else {
-      // 非Windows系统使用原始搜索
-      return await originalFileSearch(query, maxResults)
-    }
-  } catch (error) {
-    console.error('Everything搜索出错:', error)
-    // 出错时降级到原始搜索
-    return await originalFileSearch(query, maxResults)
-  }
-
-  return files
-}
-
-// 原始文件搜索函数（作为Everything的降级方案）
+// 原始文件搜索函数
 async function originalFileSearch(query: string, maxResults = 50): Promise<FileInfo[]> {
   const files: FileInfo[] = []
 
   try {
     if (process.platform === 'win32') {
-      // Windows: 使用dir命令搜索
+      // Windows: 在常见用户目录中搜索
       const searchPaths = [
         process.env.USERPROFILE + '\\Desktop',
         process.env.USERPROFILE + '\\Documents',
@@ -565,24 +459,12 @@ ipcMain.handle('search-files', async (_event, query: string, maxResults = 50) =>
       console.log('使用扩展文件搜索提供者')
       return await currentProvider(query, maxResults)
     } else {
-      // 优先使用Everything全盘搜索
-      console.log('使用Everything全盘搜索')
-      return await everythingFileSearch(query, maxResults)
+      // 使用原始文件搜索
+      console.log('使用原始文件搜索')
+      return await originalFileSearch(query, maxResults)
     }
   } catch (error) {
     console.error('文件搜索失败:', error)
-    // 降级到原始搜索
-    return await originalFileSearch(query, maxResults)
-  }
-})
-
-// 添加专门的Everything搜索API
-ipcMain.handle('search-everything', async (_event, query: string, maxResults = 100) => {
-  try {
-    console.log('专用Everything搜索:', query)
-    return await everythingFileSearch(query, maxResults)
-  } catch (error) {
-    console.error('Everything搜索失败:', error)
     // 降级到原始搜索
     return await originalFileSearch(query, maxResults)
   }
@@ -949,20 +831,7 @@ ipcMain.handle('open-data-directory', async () => {
   return true
 })
 
-// 配置 Everything 路径
-ipcMain.handle('set-everything-path', (_event, path: string) => {
-  try {
-    if (path && typeof path === 'string') {
-      settingsStore.set('everythingPath', path)
-      console.log('主进程: 已设置 Everything 路径:', path)
-      return { success: true }
-    }
-    return { success: false, message: '无效路径' }
-  } catch (e) {
-    console.error('设置 Everything 路径失败:', e)
-    return { success: false, message: e instanceof Error ? e.message : String(e) }
-  }
-})
+// 已删除设置 Everything 路径相关 API
 
 
 
@@ -1010,6 +879,23 @@ ipcMain.handle('extensions-disable', async (_event, extensionId: string) => {
 
 ipcMain.handle('extensions-get-info', (_event, extensionId: string) => {
   return extensionManager?.getExtensionInfo(extensionId) || null
+})
+
+// 新增：获取所有扩展贡献（列表项、菜单、窗口）
+ipcMain.handle('extensions-get-contributions', () => {
+  return extensionManager?.getContributions() || {}
+})
+
+// 新增：执行扩展命令
+ipcMain.handle('extensions-execute-command', async (_event, extensionId: string, command: string, args?: any) => {
+  if (!extensionManager) return false
+  return await extensionManager.executeCommand(extensionId, command, args)
+})
+
+// 新增：打开扩展窗口
+ipcMain.handle('extensions-open-window', async (_event, extensionId: string, windowId: string) => {
+  if (!extensionManager) return false
+  return await extensionManager.openExtensionWindow(extensionId, windowId)
 })
 
 // 扩展文件搜索替换

@@ -104,7 +104,7 @@ export interface ElectronAPI {
   quit: () => Promise<void>
   hide: () => Promise<void>
   minimize: () => Promise<void>
-  resizeWindow: (isMenuOpen: boolean) => Promise<void>
+  resizeWindow: (options: { isMenuOpen?: boolean; resultCount?: number; installedExtensionCount?: number; targetHeight?: number }) => Promise<void>
   searchApplications: () => Promise<ApplicationInfo[]>
   searchFiles: (query: string, maxResults?: number) => Promise<FileInfo[]>
   getFileIcon: (path: string) => string | null

@@ -37,17 +37,15 @@ declare global {
       resizeWindow: (options: { 
         isMenuOpen?: boolean
         resultCount?: number
-        isEverythingOpen?: boolean
         targetHeight?: number
         installedExtensionCount?: number
       }) => void
       openApplication: (path: string) => Promise<boolean>
       openFile: (path: string) => Promise<boolean>
       searchFiles: (query: string, limit: number) => Promise<any[]>
-      searchEverything: (query: string, limit?: number) => Promise<any[]>
       searchApplications: () => Promise<any[]>
 
-      // 新增的设置相关 API
+      // 设置相关 API
       setTheme: (theme: 'auto' | 'light' | 'dark') => void
       setTransparency: (opacity: number) => void
       setAutoStart: (enabled: boolean) => void
@@ -56,9 +54,9 @@ declare global {
       exportSettings: (settings: any) => Promise<void>
       openDataDirectory: () => Promise<void>
 
-      // 系统监控相关 API - 已实现
-      getSystemInfo: () => Promise<SystemInfo>
-      cleanSystem: () => Promise<boolean>
+      // 系统监控相关 API - 预留（未实现）
+      // getSystemInfo: () => Promise<SystemInfo>
+      // cleanSystem: () => Promise<boolean>
 
       // 托盘相关 API
       trayShowNotification: (title: string, body: string) => Promise<void>
@@ -76,6 +74,9 @@ declare global {
         selectFolder: () => Promise<{ success: boolean; path?: string; message?: string }>
         replaceFileSearch: (extensionId: string, provider: any) => Promise<{ success: boolean; message: string }>
         restoreFileSearch: (extensionId: string) => Promise<{ success: boolean; message: string }>
+        getContributions: () => Promise<Record<string, any>>
+        executeCommand: (extensionId: string, command: string, args?: any) => Promise<boolean>
+        openWindow: (extensionId: string, windowId: string) => Promise<boolean>
       }
     }
   }

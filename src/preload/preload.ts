@@ -11,7 +11,6 @@ const electronAPI = {
   resizeWindow: (options: { 
     isMenuOpen?: boolean
     resultCount?: number
-    isEverythingOpen?: boolean
     targetHeight?: number
     installedExtensionCount?: number
   }) => ipcRenderer.invoke('window-resize', options),
@@ -19,7 +18,6 @@ const electronAPI = {
   // 系统搜索
   searchApplications: () => ipcRenderer.invoke('search-applications'),
   searchFiles: (query: string, maxResults?: number) => ipcRenderer.invoke('search-files', query, maxResults),
-  searchEverything: (query: string, maxResults?: number) => ipcRenderer.invoke('search-everything', query, maxResults),
   getFileIcon: (path: string) => {
     try {
       const result = ipcRenderer.sendSync('sync-message', { type: 'getFileIcon', path })
@@ -78,7 +76,7 @@ const electronAPI = {
   updateHotkeys: (hotkeys: any) => ipcRenderer.invoke('update-hotkeys', hotkeys),
   exportSettings: (settings: any) => ipcRenderer.invoke('export-settings', settings),
   openDataDirectory: () => ipcRenderer.invoke('open-data-directory'),
-  setEverythingPath: (path: string) => ipcRenderer.invoke('set-everything-path', path),
+  // Everything 相关已移除
 
 
 
@@ -102,7 +100,10 @@ const electronAPI = {
     getInfo: (extensionId: string) => ipcRenderer.invoke('extensions-get-info', extensionId),
     selectFolder: () => ipcRenderer.invoke('extensions-select-folder'),
     replaceFileSearch: (extensionId: string, provider: any) => ipcRenderer.invoke('extensions-replace-file-search', extensionId, provider),
-    restoreFileSearch: (extensionId: string) => ipcRenderer.invoke('extensions-restore-file-search', extensionId)
+    restoreFileSearch: (extensionId: string) => ipcRenderer.invoke('extensions-restore-file-search', extensionId),
+    getContributions: () => ipcRenderer.invoke('extensions-get-contributions'),
+    executeCommand: (extensionId: string, command: string, args?: any) => ipcRenderer.invoke('extensions-execute-command', extensionId, command, args),
+    openWindow: (extensionId: string, windowId: string) => ipcRenderer.invoke('extensions-open-window', extensionId, windowId),
   }
 }
 

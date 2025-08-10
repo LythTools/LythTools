@@ -4,7 +4,7 @@ import { useSearchStore } from './stores/searchStore'
 import { useSettingsStore } from './stores/settingsStore'
 
 const App: React.FC = () => {
-  const { initializeSearch, isMenuOpen, setMenuOpen, results, isEverythingOpen, installedExtensionCount } = useSearchStore()
+  const { initializeSearch, isMenuOpen, setMenuOpen, results, installedExtensionCount } = useSearchStore()
   const { initializeTheme, incrementLaunchCount } = useSettingsStore()
 
   useEffect(() => {
@@ -43,13 +43,12 @@ const App: React.FC = () => {
     if (window.electronAPI?.resizeWindow) {
       // 传递详细的状态信息给主进程，让其动态计算窗口高度
       window.electronAPI.resizeWindow({
-        isMenuOpen: isMenuOpen,
-        resultCount: results.length,
-        isEverythingOpen: isEverythingOpen,
-        installedExtensionCount: installedExtensionCount
+         isMenuOpen: isMenuOpen,
+         resultCount: results.length,
+         installedExtensionCount: installedExtensionCount
       })
     }
-  }, [isMenuOpen, results.length, isEverythingOpen, installedExtensionCount])
+  }, [isMenuOpen, results.length, installedExtensionCount])
 
   return (
     <div className="search-container">
