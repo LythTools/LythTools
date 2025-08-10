@@ -35,7 +35,7 @@ npm install
 
 ### 开发环境
 ```bash
-npm run dev# 启动开发环境
+npm run dev           # 启动开发环境
 npm run dev:main      # 启动Electron主进程
 ```
 
