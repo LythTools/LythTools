@@ -10,9 +10,8 @@ release/
 build/
 
 # 扩展
-/extensions
-/everything-search-extension
-/lythtools-extension-template
+/examples
+
 
 # Environment variables
 .env.local

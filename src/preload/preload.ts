@@ -18,15 +18,8 @@ const electronAPI = {
   // 系统搜索
   searchApplications: () => ipcRenderer.invoke('search-applications'),
   searchFiles: (query: string, maxResults?: number) => ipcRenderer.invoke('search-files', query, maxResults),
-  getFileIcon: (path: string) => {
-    try {
-      const result = ipcRenderer.sendSync('sync-message', { type: 'getFileIcon', path })
-      return result.success ? result.data : null
-    } catch (error) {
-      console.error('同步获取图标失败:', error)
-      return null
-    }
-  },
+  // 改为异步获取图标，避免未实现的同步 IPC 阻塞
+  getFileIcon: (path: string): Promise<string | null> => ipcRenderer.invoke('get-file-icon', path),
   openApplication: (path: string) => ipcRenderer.invoke('open-application', path),
   openFile: (path: string) => ipcRenderer.invoke('open-file', path),
 
@@ -42,8 +35,9 @@ const electronAPI = {
     ipcRenderer.on('window-blur', callback)
   },
 
-  onIconUpdated: (callback: (data: { path: string; icon: string }) => void) => {
-    ipcRenderer.on('icon-updated', (_, data) => callback(data))
+  // 扩展贡献变更事件
+  onExtensionsContributionsChanged: (callback: (data: { extensionId: string; contributions: any }) => void) => {
+    ipcRenderer.on('extensions-contributions-changed', (_, data) => callback(data))
   },
 
   // 通知事件监听
@@ -76,9 +70,8 @@ const electronAPI = {
   updateHotkeys: (hotkeys: any) => ipcRenderer.invoke('update-hotkeys', hotkeys),
   exportSettings: (settings: any) => ipcRenderer.invoke('export-settings', settings),
   openDataDirectory: () => ipcRenderer.invoke('open-data-directory'),
-  // Everything 相关已移除
-
-
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  selectAvatarImage: () => ipcRenderer.invoke('select-avatar-image'),
 
   // 托盘相关API
   trayShowNotification: (title: string, body: string) => {

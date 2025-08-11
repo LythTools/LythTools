@@ -1,0 +1,560 @@
+/* 菜单系统样式模块 */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+
+/* ==========================================================================
+   内联菜单容器
+   ========================================================================== */
+.inline-menu-container {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: var(--spacing-sm);
+  background: var(--bg-primary);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  z-index: 1000;
+  width: 100%;
+  max-width: 100%;
+  /* 禁用入场动画以避免横向抖动/滚动 */
+  animation: none;
+}
+
+/* 统一容器盒模型与横向溢出处理，避免右侧多出空白与横向滚动 */
+.inline-menu-container,
+.plugin-menu-content,
+.inline-menu-content,
+.menu-content,
+.menu-body {
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   菜单内容布局
+   ========================================================================== */
+.plugin-menu-content {
+  padding: 0;
+  height: 601px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.inline-menu-content {
+  padding: var(--spacing-md);
+  height: calc(601px - 3rem);
+  overflow-y: auto;
+  overflow-x: hidden; /* 禁用横向滚动 */
+}
+
+.menu-content {
+  padding: 0;
+  overflow-x: hidden; /* 禁用横向滚动 */
+}
+
+/* 专属滚动条样式（与主题一致） */
+.plugin-menu-content,
+.inline-menu-content,
+.menu-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--border-color-rgb), 0.5) transparent;
+}
+
+.plugin-menu-content::-webkit-scrollbar,
+.inline-menu-content::-webkit-scrollbar,
+.menu-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.plugin-menu-content::-webkit-scrollbar-thumb,
+.inline-menu-content::-webkit-scrollbar-thumb,
+.menu-body::-webkit-scrollbar-thumb {
+  background: rgba(var(--border-color-rgb), 0.5);
+  border-radius: 3px;
+}
+
+.plugin-menu-content::-webkit-scrollbar-thumb:hover,
+.inline-menu-content::-webkit-scrollbar-thumb:hover,
+.menu-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--border-color-rgb), 0.7);
+}
+
+.menu-header {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-sm);
+  border-bottom: 1px solid rgba(var(--border-color-rgb), 0.3);
+  background: var(--bg-secondary);
+}
+
+.menu-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.menu-body {
+  padding: var(--spacing-md) var(--spacing-lg);
+  min-height: 200px;
+  height: calc(601px - 3rem);
+  overflow-y: auto;
+}
+
+/* 菜单视图样式 */
+.menu-view {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--bg-primary-rgb), 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.menu-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+  opacity: 0.5;
+}
+
+.menu-view .menu-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid rgba(var(--border-color-rgb), 0.3);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background: var(--bg-secondary);
+  position: relative;
+}
+
+.menu-view .menu-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.menu-view .menu-content {
+  flex: 1;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  overflow-x: hidden; /* 禁用横向滚动 */
+}
+
+/* ==========================================================================
+   返回按钮设计
+   ========================================================================== */
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--easing-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.back-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-color), 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.back-button:hover::before {
+  left: 100%;
+}
+
+.back-button:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  transform: translateX(-3px);
+}
+
+.back-button:active {
+  transform: translateX(-1px);
+}
+
+/* ==========================================================================
+   菜单节和菜单项
+   ========================================================================== */
+.menu-section {
+  margin-bottom: var(--spacing-lg);
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.menu-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color), transparent);
+  border-radius: 1px;
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--easing-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-item:hover {
+  background: var(--bg-primary);
+  border-color: var(--hover-border-color);
+}
+
+.menu-item:active {
+  transform: translateX(2px);
+}
+
+.item-icon {
+  font-size: 1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-color), 0.1);
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  color: var(--accent-color);
+  transition: all var(--easing);
+}
+
+.item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.125rem;
+  transition: color var(--easing);
+}
+
+.menu-item:hover .item-title {
+  color: var(--accent-color);
+}
+
+.item-description {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* 主标签页系统 */
+.main-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 0.35rem;
+  margin: 0.25rem;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.main-tabs::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-color), 0.3), transparent);
+}
+
+.main-tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.6rem 0.9rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--easing-smooth);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.main-tab-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-color), 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.main-tab-button:hover::before {
+  left: 100%;
+}
+
+.main-tab-button:hover {
+  color: var(--accent-color);
+  background: rgba(var(--accent-color), 0.05);
+}
+
+.main-tab-button.active {
+  background: var(--bg-primary);
+  color: var(--accent-color);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.tab-icon {
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform var(--easing);
+}
+
+.main-tab-button:hover .tab-icon {
+  transform: scale(1.1);
+}
+
+.main-tab-button.active .tab-icon {
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   子标签页系统
+   ========================================================================== */
+.sub-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 0.25rem;
+  margin: 0 var(--spacing-sm) var(--spacing-sm) var(--spacing-sm);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sub-tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: var(--spacing-sm) 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--easing);
+  border-radius: var(--radius-xs);
+  position: relative;
+}
+
+.sub-tab-button:hover {
+  color: var(--accent-color);
+  background: rgba(var(--accent-color), 0.08);
+}
+
+.sub-tab-button.active {
+  background: var(--bg-primary);
+  color: var(--accent-color);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.sub-tab-button .tab-icon {
+  font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   关闭按钮
+   ========================================================================== */
+.close-button-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--easing);
+  border-left: 1px solid rgba(var(--border-color-rgb), 0.3);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.close-button-tab:hover {
+  background: rgba(var(--error-color), 0.1);
+  color: var(--error-color);
+}
+
+.close-button-tab:active {
+  transform: scale(0.95);
+}
+
+/* ==========================================================================
+   菜单内模态框系统 - 限制在菜单容器内
+   ========================================================================== */
+.menu-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+  pointer-events: auto;
+  animation: overlayFadeIn 0.2s ease-out;
+}
+
+.menu-modal-content {
+  position: relative;
+  width: 95%;
+  max-width: 640px;
+  max-height: 85vh;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 模态框状态动画 */
+.menu-modal-overlay.closing {
+  animation: overlayFadeOut 0.2s ease-in;
+}
+
+.menu-modal-content.closing {
+  animation: modalSlideOut 0.2s ease-in;
+}
+
+/* 模态框内容优化 */
+.menu-modal-content > * {
+  flex-shrink: 0;
+}
+
+.menu-modal-content > *:last-child {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 动画定义已移至animations.css统一管理 */
+
+/* ==========================================================================
+   响应式设计
+   ========================================================================== */
+@media (max-width: 768px) {
+  .inline-menu-container {
+    margin-top: var(--spacing-xs);
+  }
+  
+  .menu-view .menu-header {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+  
+  .menu-view .menu-content {
+    padding: var(--spacing-sm);
+  }
+  
+  .main-tabs {
+    padding: 0.25rem;
+    margin: 0.125rem;
+  }
+  
+  .main-tab-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .menu-modal-content {
+    width: 98%;
+    max-width: none;
+    max-height: 75vh;
+  }
+}
+
+/* ==========================================================================
+   性能优化
+   ========================================================================== */
+.menu-item,
+.main-tab-button,
+.sub-tab-button {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* 减少重排重绘 */
+.item-icon {
+  contain: layout style;
+}

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchStore } from '../stores/searchStore'
 import { useTray } from '../hooks/useTray'
 import SearchResults from './SearchResults'
-// EverythingResults 已移除
 import MenuView from './MenuView'
 
 const SearchBox: React.FC = () => {
@@ -13,7 +12,6 @@ const SearchBox: React.FC = () => {
     results,
     isLoading,
     isMenuOpen,
-    // Everything 相关已移除
     setQuery,
     setMenuOpen,
     
@@ -38,7 +36,7 @@ const SearchBox: React.FC = () => {
     updateTrayIcon(true)
   }, [updateTrayIcon])
 
-  // 处理键盘事件（去除 Everything 分支）
+  // 处理键盘事件
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     // 普通搜索的键盘事件
     switch (event.key) {
@@ -72,7 +70,7 @@ const SearchBox: React.FC = () => {
     }
   }
 
-  // 处理输入变化（去除 Everything 分支）
+  // 处理输入变化
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = event.target.value
 

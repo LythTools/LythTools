@@ -25,8 +25,6 @@ jobs:
     env:
       # Disable code signing by default (avoid CI prompts)
       CSC_IDENTITY_AUTO_DISCOVERY: false
-      ELECTRON_CACHE: ${{ runner.temp }}/electron
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
     steps:
       - name: Checkout
@@ -38,28 +36,59 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Restore Electron cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            electron-${{ runner.os }}-
+
+      - name: Restore electron-builder cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/electron-builder
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            electron-builder-${{ runner.os }}-
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
       - name: Build renderer and main
         run: npm run build
         timeout-minutes: 20
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
       # Platform-specific packaging
       - name: Package (Windows)
-        if: runner.os == 'Windows'
+        if: github.event_name == 'push' && runner.os == 'Windows'
         run: npm run dist:win
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
       - name: Package (macOS)
-        if: runner.os == 'macOS'
+        if: github.event_name == 'push' && runner.os == 'macOS'
         run: npm run dist:mac
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
       - name: Package (Linux)
-        if: runner.os == 'Linux'
+        if: github.event_name == 'push' && runner.os == 'Linux'
         run: npm run dist:linux
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
       - name: Upload artifacts
-        if: always()
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: lythtools-${{ runner.os }}-${{ github.sha }}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useSearchStore } from '../stores/searchStore'
 import { SearchCategory } from '../types'
+import { getAppIcon, getFileIcon } from '../../../shared/utils/iconUtils'
 
 // 获取类别图标
 const getCategoryIcon = (category: SearchCategory): string => {
@@ -29,45 +30,24 @@ const AppIcon: React.FC<{ item: any }> = ({ item }) => {
   const [iconError, setIconError] = useState(false)
 
   useEffect(() => {
-    if (item.type === 'application' && item.path && window.electronAPI.getFileIcon) {
-      console.log('前端：同步获取图标，路径:', item.path)
-
-      try {
-        // 同步获取图标
-        const icon = window.electronAPI.getFileIcon(item.path)
-
-        if (icon) {
-          console.log('前端：同步获取图标成功，数据长度:', icon.length)
-          setIconSrc(icon)
-          setIconError(false)
-        } else {
-          console.log('前端：同步获取图标失败，使用降级方案')
-          setIconError(true)
+    let cancelled = false
+    ;(async () => {
+      if (item.type === 'application' && item.path && window.electronAPI.getFileIcon) {
+        try {
+          const icon = await window.electronAPI.getFileIcon(item.path)
+          if (!cancelled && icon) {
+            setIconSrc(icon)
+            setIconError(false)
+          } else if (!cancelled) {
+            setIconError(true)
+          }
+        } catch (error) {
+          if (!cancelled) setIconError(true)
         }
-      } catch (error) {
-        console.error('前端：同步获取图标异常:', error)
-        setIconError(true)
       }
-    }
-
-    // 监听图标更新事件（异步获取的真实图标）
-    const handleIconUpdate = (data: { path: string; icon: string }) => {
-      if (data.path === item.path) {
-        console.log('前端：收到图标更新事件')
-        setIconSrc(data.icon)
-        setIconError(false)
-      }
-    }
-
-    if (window.electronAPI.onIconUpdated) {
-      window.electronAPI.onIconUpdated(handleIconUpdate)
-    }
-
+    })()
     return () => {
-      // 清理事件监听器
-      if (window.electronAPI.removeAllListeners) {
-        window.electronAPI.removeAllListeners('icon-updated')
-      }
+      cancelled = true
     }
   }, [item.path, item.type])
 
@@ -92,47 +72,16 @@ const AppIcon: React.FC<{ item: any }> = ({ item }) => {
   }
 
   // 降级到emoji图标
-  const getAppIcon = (item: any) => {
+  const getFallbackIcon = (item: any) => {
     if (item.type === 'application') {
-      const appName = item.title.toLowerCase()
-
-      // 常见应用程序的图标映射
-      const iconMap: { [key: string]: string } = {
-        'notepad': '📝',
-        'calculator': '🧮',
-        'chrome': '🌐',
-        'firefox': '🦊',
-        'edge': '🌐',
-        'word': '📄',
-        'excel': '📊',
-        'powerpoint': '📊',
-        'outlook': '📧',
-        'vscode': '💻',
-        'visual studio': '💻',
-        'photoshop': '🎨',
-        'steam': '🎮',
-        'discord': '💬',
-        'spotify': '🎵',
-        'vlc': '🎬',
-        'winrar': '📦',
-        '7zip': '📦',
-        'git': '📂'
-      }
-
-      // 查找匹配的图标
-      for (const [key, icon] of Object.entries(iconMap)) {
-        if (appName.includes(key)) {
-          return icon
-        }
-      }
-
-      // 默认应用程序图标
-      return '🚀'
+      return getAppIcon(item.title)
+    } else if (item.type === 'file' || item.type === 'folder') {
+      return getFileIcon(item.title, item.type)
     }
     return item.icon || getCategoryIcon(item.category)
   }
 
-  return <span>{getAppIcon(item)}</span>
+  return <span>{getFallbackIcon(item)}</span>
 }
 
 const SearchResults: React.FC = () => {
@@ -173,47 +122,7 @@ const SearchResults: React.FC = () => {
     setSelectedIndex(index)
   }
 
-  // 获取应用程序图标
-  const getAppIcon = (item: any) => {
-    if (item.type === 'application') {
-      // 根据应用程序名称返回对应的图标
-      const appName = item.title.toLowerCase()
 
-      // 常见应用程序的图标映射
-      const iconMap: { [key: string]: string } = {
-        'notepad': '📝',
-        'calculator': '🧮',
-        'chrome': '🌐',
-        'firefox': '🦊',
-        'edge': '🌐',
-        'word': '📄',
-        'excel': '📊',
-        'powerpoint': '📊',
-        'outlook': '📧',
-        'vscode': '💻',
-        'visual studio': '💻',
-        'photoshop': '🎨',
-        'steam': '🎮',
-        'discord': '💬',
-        'spotify': '🎵',
-        'vlc': '🎬',
-        'winrar': '📦',
-        '7zip': '📦',
-        'git': '📂'
-      }
-
-      // 查找匹配的图标
-      for (const [key, icon] of Object.entries(iconMap)) {
-        if (appName.includes(key)) {
-          return icon
-        }
-      }
-
-      // 默认应用程序图标
-      return '🚀'
-    }
-    return item.icon || getCategoryIcon(item.category)
-  }
 
   return (
     <div className="results-grid">

@@ -1,0 +1,1115 @@
+/* 插件管理系统样式模块 */
+
+/* ==========================================================================
+   插件管理头部
+   ========================================================================== */
+.plugins-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.plugins-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color), transparent);
+  border-radius: 1px;
+}
+
+.plugins-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  position: relative;
+}
+
+.plugins-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* ==========================================================================
+   插件操作按钮样式
+   ========================================================================== */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--easing);
+  min-height: 2rem;
+  font-family: inherit;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-color), 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.btn-secondary:hover::before {
+  left: 100%;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--easing);
+}
+
+.btn-secondary:hover .btn-icon {
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   插件筛选系统
+   ========================================================================== */
+.plugin-filters {
+  display: flex;
+  gap: 0.75rem;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(8px);
+}
+
+.search-box-small {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-secondary);
+  z-index: 1;
+  transition: color var(--easing);
+}
+
+.search-input-small {
+  width: 100%;
+  padding: var(--spacing-sm) 0.75rem var(--spacing-sm) 2.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--easing-smooth);
+}
+
+.search-input-small::placeholder {
+  color: var(--text-secondary);
+}
+
+.search-input-small:focus {
+  border-color: var(--accent-color);
+  box-shadow: var(--ring);
+  transform: translateY(-1px);
+}
+
+.search-input-small:focus + .search-icon {
+  color: var(--accent-color);
+}
+
+.category-select {
+  padding: var(--spacing-sm) 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: all var(--easing);
+}
+
+.category-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: var(--ring);
+}
+
+.category-select:hover {
+  border-color: var(--accent-color);
+}
+
+/* ==========================================================================
+   插件列表容器
+   ========================================================================== */
+.plugin-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-primary);
+  height: calc(100% - 120px);
+  scroll-behavior: smooth;
+}
+
+/* 按钮样式重置按需定义，避免过度覆盖 */
+
+/* 插件卡片设计 */
+.plugin-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--easing);
+}
+
+.plugin-card:hover {
+  background: var(--bg-secondary);
+  border-color: var(--hover-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 扩展卡片特殊样式 */
+.extension-card {
+  border-left: 3px solid var(--accent-color);
+}
+
+/* 扩展卡片按钮 - 与整体风格一致的设计 */
+.extension-card button,
+.plugin-card button {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--easing);
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  position: relative;
+  min-height: 1.75rem;
+  font-family: inherit;
+  text-decoration: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.extension-card button:hover,
+.plugin-card button:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* 主要按钮变体 */
+.extension-card button.primary,
+.plugin-card button.primary {
+  background: rgba(var(--accent-color), 0.1);
+  color: var(--accent-color);
+  border-color: rgba(var(--accent-color), 0.3);
+}
+
+.extension-card button.primary:hover,
+.plugin-card button.primary:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* 危险按钮变体 */
+.extension-card button.danger,
+.plugin-card button.danger {
+  background: rgba(var(--error-color), 0.1);
+  color: var(--error-color);
+  border-color: rgba(var(--error-color), 0.3);
+}
+
+.extension-card button.danger:hover,
+.plugin-card button.danger:hover {
+  background: var(--error-color);
+  color: white;
+  border-color: var(--error-color);
+}
+
+/* ==========================================================================
+   插件信息布局
+   ========================================================================== */
+.plugin-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.plugin-icon-large {
+  font-size: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.plugin-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.plugin-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.plugin-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plugin-version {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   状态标签系统
+   ========================================================================== */
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border: 1px solid;
+  transition: all var(--easing);
+}
+
+.status-badge.enabled {
+  background: rgba(var(--success-color), 0.1);
+  color: var(--success-color);
+  border-color: rgba(var(--success-color), 0.3);
+}
+
+.status-badge.enabled:hover {
+  background: rgba(var(--success-color), 0.2);
+  transform: scale(1.05);
+}
+
+.status-badge.disabled {
+  background: rgba(var(--text-secondary), 0.1);
+  color: var(--text-secondary);
+  border-color: rgba(var(--text-secondary), 0.3);
+}
+
+.status-badge.disabled:hover {
+  background: rgba(var(--text-secondary), 0.2);
+  transform: scale(1.05);
+}
+
+.plugin-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.plugin-meta {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  align-items: center;
+}
+
+.plugin-author {
+  font-style: italic;
+  position: relative;
+}
+
+.plugin-author::before {
+  content: '👤';
+  margin-right: 0.25rem;
+}
+
+.plugin-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ==========================================================================
+   插件操作按钮
+   ========================================================================== */
+.plugin-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* 卡片按钮样式 - 简洁现代设计 */
+.plugin-button {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--easing);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  position: relative;
+  min-height: 2rem;
+  font-family: inherit;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.plugin-button:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Plugin按钮变体样式 */
+.plugin-button.primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.plugin-button.primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 3px 8px rgba(var(--accent-color), 0.3);
+}
+
+.plugin-button.secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.plugin-button.secondary:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.plugin-button.danger {
+  background: var(--error-color);
+  color: white;
+}
+
+.plugin-button.danger:hover {
+  background: rgba(var(--error-color), 0.9);
+  box-shadow: 0 3px 8px rgba(var(--error-color), 0.3);
+}
+
+.plugin-button.success {
+  background: var(--success-color);
+  color: white;
+}
+
+.plugin-button.success:hover {
+  background: rgba(var(--success-color), 0.9);
+  box-shadow: 0 3px 8px rgba(var(--success-color), 0.3);
+}
+
+/* 切换按钮 */
+.toggle-button.enabled {
+  background: var(--error-color);
+  color: white;
+}
+
+.toggle-button.enabled:hover {
+  background: rgba(var(--error-color), 0.9);
+  box-shadow: 0 2px 6px rgba(var(--error-color), 0.3);
+}
+
+.toggle-button.disabled {
+  background: var(--success-color);
+  color: white;
+}
+
+.toggle-button.disabled:hover {
+  background: rgba(var(--success-color), 0.9);
+  box-shadow: 0 2px 6px rgba(var(--success-color), 0.3);
+}
+
+/* 详情按钮 */
+.detail-button {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.detail-button:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 6px rgba(var(--accent-color), 0.3);
+}
+
+/* 安装按钮 */
+.install-button {
+  background: var(--accent-color);
+  border: none;
+  color: white;
+}
+
+.install-button:hover {
+  background: var(--accent-hover);
+  color: white;
+  box-shadow: 0 3px 8px rgba(var(--accent-color), 0.3);
+}
+
+/* 卸载按钮 */
+.uninstall-button {
+  background: var(--error-color);
+  border: none;
+  color: white;
+}
+
+.uninstall-button:hover {
+  background: rgba(var(--error-color), 0.9);
+  color: white;
+  box-shadow: 0 3px 8px rgba(var(--error-color), 0.3);
+}
+
+/* 插件详情模态框组件 */
+.plugin-detail-modal {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* 确保flex布局正确工作 */
+  height: 100%;
+}
+
+.plugin-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.plugin-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.plugin-detail-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plugin-detail-icon {
+  font-size: 1.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-color), 0.1);
+  border: 1px solid rgba(var(--accent-color), 0.3);
+  border-radius: var(--radius-md);
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.plugin-detail-content {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0; /* 让flex子项可以收缩 */
+  /* 确保滚动条显示 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--border-color-rgb), 0.3) transparent;
+  /* 优化滚动性能 */
+  contain: layout style paint;
+}
+
+.plugin-detail-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.plugin-detail-content::-webkit-scrollbar-thumb {
+  background: rgba(var(--border-color-rgb), 0.3);
+  border-radius: 3px;
+}
+
+.plugin-detail-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--border-color-rgb), 0.5);
+}
+
+.modal-close {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  transition: all var(--easing);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+}
+
+/* 插件元数据网格 */
+.plugin-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  text-align: center;
+  padding: 0.375rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+}
+
+.meta-label {
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.meta-value {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* 模态框内容区域统一样式 */
+.plugin-detail-description,
+.plugin-detail-features,
+.plugin-detail-changelog,
+.plugin-detail-tags,
+.plugin-detail-links,
+
+
+
+.plugin-detail-description:last-child,
+.plugin-detail-features:last-child,
+.plugin-detail-changelog:last-child,
+.plugin-detail-tags:last-child,
+.plugin-detail-links:last-child,
+
+
+.plugin-detail-description h3,
+.plugin-detail-features h3,
+.plugin-detail-changelog h3,
+.plugin-detail-links h3,
+.plugin-detail-tags h3,
+.section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary) !important;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.plugin-detail-description h3::before,
+.plugin-detail-features h3::before,
+.plugin-detail-changelog h3::before,
+.plugin-detail-links h3::before,
+.plugin-detail-tags h3::before,
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 0.875rem;
+  background: var(--accent-color);
+  border-radius: 1.5px;
+}
+
+.plugin-detail-description p {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.plugin-detail-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.plugin-detail-features li {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xs);
+  position: relative;
+  padding-left: 1.25rem;
+}
+
+.plugin-detail-features li:before {
+  content: '✓';
+  position: absolute;
+  left: 0.375rem;
+  color: var(--success-color);
+  font-weight: 600;
+  font-size: 0.625rem;
+}
+
+/* 标签和链接 */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  background: rgba(var(--accent-color), 0.1);
+  color: var(--accent-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.625rem;
+  font-weight: 500;
+  border: 1px solid rgba(var(--accent-color), 0.2);
+}
+
+.links-container {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  text-decoration: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  transition: all var(--easing);
+}
+
+.link-button:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* ==========================================================================
+   更新日志
+   ========================================================================== */
+.changelog-item {
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-color);
+}
+
+.changelog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.changelog-version {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.changelog-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.changelog-changes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.changelog-changes li {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.changelog-changes li:before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   插件操作区域 - 简化设计
+   ========================================================================== */
+.plugin-detail-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.action-button {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--easing);
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button.install {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.action-button.install:hover {
+  background: var(--accent-hover);
+}
+
+.action-button.uninstall {
+  background: var(--error-color);
+  color: white;
+  border-color: var(--error-color);
+}
+
+.action-button.uninstall:hover {
+  background: rgba(239, 68, 68, 0.9);
+}
+
+.action-button.secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.action-button.secondary:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.action-button.primary {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.action-button.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ==========================================================================
+   空状态设计
+   ========================================================================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.6;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+
+/* ==========================================================================
+   设置模态框样式 - 复用详情模态框的样式类
+   ========================================================================== */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all var(--easing);
+}
+
+.setting-item:hover {
+  background: var(--bg-secondary);
+  border-color: var(--hover-border-color);
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-name {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: color var(--easing);
+}
+
+.setting-item:hover .setting-name {
+  color: var(--accent-color);
+}
+
+.setting-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.setting-control {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 设置控件样式 */
+.setting-input,
+.setting-select {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-width: 100px;
+  transition: all var(--easing);
+}
+
+.setting-input:focus,
+.setting-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: var(--ring);
+}
+
+
+
+/* 命令关键词标签 - 在 li 内部显示 */
+.command-keywords {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.keyword-tag {
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+}
+
+/* 空状态样式 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* ==========================================================================
+   响应式设计
+   ========================================================================== */
+@media (max-width: 768px) {
+  .plugin-filters {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+  
+  .plugin-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .plugin-info {
+    width: 100%;
+  }
+  
+  .plugin-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .plugin-detail-meta {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .setting-control {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+

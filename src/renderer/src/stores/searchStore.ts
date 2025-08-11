@@ -1,76 +1,17 @@
 import { create } from 'zustand'
-import Fuse from 'fuse.js'
-import { SearchResultItem, SearchConfig, SearchCategory, ApplicationInfo, FileInfo } from '../types'
+import { SearchResultItem, SearchCategory, ApplicationInfo } from '../types'
 import { useSettingsStore } from './settingsStore'
+import { isCalculatorQuery, safeEvaluate } from '../../../shared/utils/searchUtils'
+import { SEARCH_CONFIG } from '../../../shared/constants/appConstants'
+import { searchApplicationsWithPinyin } from '../../../shared/utils/pinyinUtils'
 
-// 获取文件图标
-const getFileIcon = (fileName: string, fileType: string): string => {
-  if (fileType === 'folder') return '📁'
-
-  const ext = fileName.toLowerCase().split('.').pop() || ''
-
-  // 文档类型
-  if (['txt', 'doc', 'docx', 'rtf', 'odt'].includes(ext)) return '📄'
-  if (['pdf'].includes(ext)) return '📕'
-  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return '📊'
-  if (['ppt', 'pptx', 'odp'].includes(ext)) return '📈'
-
-  // 图片类型
-  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico'].includes(ext)) return '🖼️'
-
-  // 视频类型
-  if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v'].includes(ext)) return '🎬'
-
-  // 音频类型
-  if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(ext)) return '🎵'
-
-  // 压缩包类型
-  if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(ext)) return '📦'
-
-  // 程序类型
-  if (['exe', 'msi', 'app', 'deb', 'dmg', 'pkg'].includes(ext)) return '⚙️'
-
-  // 代码类型
-  if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss', 'less'].includes(ext)) return '💻'
-  if (['py', 'java', 'cpp', 'c', 'cs', 'php', 'rb', 'go', 'rs'].includes(ext)) return '💻'
-
-  // 配置文件
-  if (['json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg'].includes(ext)) return '⚙️'
-
-  return '📄' // 默认文件图标
-}
-
-// 本地文件搜索（浏览器环境的备用方案）
-const searchLocalFiles = async (query: string): Promise<SearchResultItem[]> => {
-  // 在浏览器环境中，我们无法直接访问文件系统
-  // 这里返回一些示例结果，实际应用中需要通过Electron主进程
-  console.warn('使用本地搜索备用方案')
-
-  const mockResults: SearchResultItem[] = [
-    {
-      id: 'local-1',
-      title: `${query}.txt`,
-      description: '无法访问真实文件系统',
-      category: SearchCategory.FILE,
-      type: 'file',
-      icon: '📄',
-      action: () => {
-        console.log('浏览器环境无法打开文件')
-      }
-    }
-  ]
-
-  return mockResults
-}
-
-const maxResults = 8
+// 使用设置中的 maxResults 配置，避免无用的顶层常量
 
 interface SearchState {
   query: string
   results: SearchResultItem[]
   selectedIndex: number
   isLoading: boolean
-  fuse: Fuse<SearchResultItem> | null
   isMenuOpen: boolean
   applications: ApplicationInfo[]
   installedExtensionCount: number
@@ -91,79 +32,13 @@ interface SearchState {
   loadApplications: () => Promise<void>
 }
 
-// 默认搜索配置
-const defaultConfig: SearchConfig = {
-  threshold: 0.3,
-  maxResults: 10,
-  includeScore: true,
-  keys: ['title', 'description', 'category']
-}
-
-// 模拟搜索数据（实际项目中可以从文件系统、应用列表等获取）
-const mockSearchData: SearchResultItem[] = [
-  {
-    id: '1',
-    title: '计算器',
-    description: '打开系统计算器',
-    category: SearchCategory.APPLICATION,
-    action: () => {
-      console.log('打开计算器')
-      // 这里可以调用系统API打开计算器
-    }
-  },
-  {
-    id: '2',
-    title: '记事本',
-    description: '打开记事本应用',
-    category: SearchCategory.APPLICATION,
-    action: () => {
-      console.log('打开记事本')
-    }
-  },
-  {
-    id: '3',
-    title: '文件资源管理器',
-    description: '打开文件管理器',
-    category: SearchCategory.APPLICATION,
-    action: () => {
-      console.log('打开文件管理器')
-    }
-  },
-  {
-    id: '4',
-    title: '设置',
-    description: '打开系统设置',
-    category: SearchCategory.SYSTEM,
-    action: () => {
-      console.log('打开系统设置')
-    }
-  },
-  {
-    id: '5',
-    title: '控制面板',
-    description: '打开控制面板',
-    category: SearchCategory.SYSTEM,
-    action: () => {
-      console.log('打开控制面板')
-    }
-  },
-  {
-    id: 'calc',
-    title: '计算',
-    description: '执行数学计算',
-    category: SearchCategory.CALCULATOR,
-    action: () => {
-      console.log('执行计算')
-    }
-  }
-]
+// 保持结果来源一致（主进程）
 
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
   results: [],
   selectedIndex: 0,
   isLoading: false,
-  fuse: null,
   isMenuOpen: false,
   applications: [],
   installedExtensionCount: 0,
@@ -220,46 +95,69 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       const results: SearchResultItem[] = []
 
       // 1. 计算器功能 - 优先级最高
-      if (/^[\d+\-*/().\s]+$/.test(query)) {
-        try {
-          const result = Function('"use strict"; return (' + query + ')')()
-          if (typeof result === 'number' && !isNaN(result)) {
-            results.push({
-              id: 'calculator',
-              title: `${query} = ${result}`,
-              description: '计算结果 - 点击复制',
-              category: SearchCategory.CALCULATOR,
-              type: 'calculator',
-              icon: '🧮',
-              action: () => {
-                navigator.clipboard.writeText(result.toString())
-                window.electronAPI.hide()
-                // 增加搜索计数
-                useSettingsStore.getState().incrementSearchCount()
-              }
-            })
-          }
-        } catch (e) {
-          // 忽略计算错误
+      if (isCalculatorQuery(query)) {
+        const result = safeEvaluate(query)
+        if (result !== null) {
+          results.push({
+            id: 'calculator',
+            title: `${query} = ${result}`,
+            description: '计算结果 - 点击复制',
+            category: SearchCategory.CALCULATOR,
+            type: 'calculator',
+            icon: '🧮',
+            action: () => {
+              navigator.clipboard.writeText(result.toString())
+              window.electronAPI.hide()
+              // 增加搜索计数
+              useSettingsStore.getState().incrementSearchCount()
+            }
+          })
         }
       }
 
-      // 2. 搜索应用程序
-      let appResults = applications
+      // 2. 搜索应用程序 - 使用拼音增强搜索
+      let appResults: ApplicationInfo[] = []
 
       if (settings.fuzzySearch) {
-        // 使用模糊搜索
-        const fuse = new Fuse(applications, {
-          keys: ['name'],
-          threshold: 0.3
-        })
-        const fuzzyResults = fuse.search(query)
-        appResults = fuzzyResults.map(result => result.item).slice(0, 5)
+        // 使用拼音增强的智能搜索
+        const pinyinResults = searchApplicationsWithPinyin(
+          applications,
+          query,
+          {
+            maxResults: 5,
+            threshold: SEARCH_CONFIG.PINYIN_THRESHOLD_FUZZY
+          }
+        )
+        appResults = pinyinResults.map(result => result.item)
+        
+        console.log(`拼音搜索结果: ${pinyinResults.length}个，查询: "${query}"`)
       } else {
-        // 使用精确匹配
-        appResults = applications
+        // 传统的精确匹配 + 拼音匹配作为补充
+        const exactMatches = applications
           .filter(app => app.name.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 5)
+          .slice(0, 3)
+          
+        // 如果精确匹配结果不足，用拼音匹配补充
+        if (exactMatches.length < 5) {
+          const pinyinResults = searchApplicationsWithPinyin(
+            applications,
+            query,
+            {
+              maxResults: 5 - exactMatches.length,
+              threshold: SEARCH_CONFIG.PINYIN_THRESHOLD_EXACT
+            }
+          )
+          
+          // 去重 - 避免精确匹配和拼音匹配重复
+          const exactPaths = new Set(exactMatches.map(app => app.path))
+          const uniquePinyinResults = pinyinResults
+            .map(result => result.item)
+            .filter(app => !exactPaths.has(app.path))
+            
+          appResults = [...exactMatches, ...uniquePinyinResults].slice(0, 5)
+        } else {
+          appResults = exactMatches
+        }
       }
 
       const mappedAppResults = appResults.map(app => ({
@@ -305,8 +203,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
         results.push(...fileResults)
       }
-
-  // 已移除 Everything 提示入口
 
       // 5. 网络搜索建议
       if (results.length < 3) {

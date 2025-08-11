@@ -44,6 +44,7 @@ declare global {
       openFile: (path: string) => Promise<boolean>
       searchFiles: (query: string, limit: number) => Promise<any[]>
       searchApplications: () => Promise<any[]>
+      getFileIcon: (path: string) => Promise<string | null>
 
       // 设置相关 API
       setTheme: (theme: 'auto' | 'light' | 'dark') => void
@@ -53,6 +54,8 @@ declare global {
       showNotification: (message: string) => void
       exportSettings: (settings: any) => Promise<void>
       openDataDirectory: () => Promise<void>
+      selectDirectory: () => Promise<{ success: boolean; path?: string }>
+      selectAvatarImage: () => Promise<{ success: boolean; path?: string }>
 
       // 系统监控相关 API - 预留（未实现）
       // getSystemInfo: () => Promise<SystemInfo>

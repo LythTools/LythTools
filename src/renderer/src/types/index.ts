@@ -95,6 +95,19 @@ export interface ExtensionManifest {
     options?: { label: string; value: any }[]
   }[]
   enabled?: boolean  // 扩展是否已启用（运行时添加）
+  
+  // 可选的扩展属性
+  license?: string
+  longDescription?: string
+  features?: string[]
+  tags?: string[]
+  homepage?: string
+  repository?: string
+  changelog?: {
+    version: string
+    date: string
+    changes: string[]
+  }[]
 }
 
 /**
@@ -107,13 +120,12 @@ export interface ElectronAPI {
   resizeWindow: (options: { isMenuOpen?: boolean; resultCount?: number; installedExtensionCount?: number; targetHeight?: number }) => Promise<void>
   searchApplications: () => Promise<ApplicationInfo[]>
   searchFiles: (query: string, maxResults?: number) => Promise<FileInfo[]>
-  getFileIcon: (path: string) => string | null
+  getFileIcon: (path: string) => Promise<string | null>
   openApplication: (path: string) => Promise<boolean>
   openFile: (path: string) => Promise<boolean>
   platform: string
   onWindowFocus: (callback: () => void) => void
   onWindowBlur: (callback: () => void) => void
-  onIconUpdated: (callback: (data: { path: string; icon: string }) => void) => void
   removeAllListeners: (channel: string) => void
   extensions: {
     getInstalled: () => Promise<ExtensionManifest[]>

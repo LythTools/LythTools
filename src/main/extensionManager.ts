@@ -19,6 +19,21 @@ export interface ExtensionManifest {
   icon: string
   category: string
   permissions: string[]
+  
+  // 详细介绍信息
+  longDescription?: string
+  features?: string[]
+  changelog?: Array<{
+    version: string
+    date: string
+    changes: string[]
+  }>
+  screenshots?: string[]
+  homepage?: string
+  repository?: string
+  license?: string
+  tags?: string[]
+  
   commands: {
     name: string
     description: string
@@ -389,7 +404,6 @@ export class ExtensionManager {
     }
   }
 
-  // 旧的文件搜索Provider能力已移除（迁移至外部扩展进程协议）
   setOriginalFileSearchProvider(_provider: (query: string, maxResults?: number) => Promise<any[]>): void {}
   replaceFileSearchProvider(_extensionId: string, _provider: (query: string, maxResults?: number) => Promise<any[]>): boolean { return false }
   restoreFileSearchProvider(_extensionId: string): boolean { return true }
@@ -514,7 +528,11 @@ export class ExtensionManager {
   // 启动外部进程扩展
   private async spawnExternalProcess(extension: InstalledExtension): Promise<void> {
     const entry = extension.manifest.entry!
-    const cwd = entry.cwd || extension.path
+    // 处理相对路径：如果 entry.cwd 是相对路径，则相对于扩展目录
+    let cwd = extension.path
+    if (entry.cwd && entry.cwd !== '.') {
+      cwd = join(extension.path, entry.cwd)
+    }
     const env = { ...process.env, ...(entry.env || {}) }
     console.log(`[${extension.manifest.id}] 启动外部进程: ${entry.command} ${(entry.args || []).join(' ')}`)
     const child = spawn(entry.command, entry.args || [], { cwd, env, shell: true })
@@ -567,8 +585,24 @@ export class ExtensionManager {
           return
         }
         if (msg.type === 'log') {
-          const level = msg.level || 'info'
-          console[level]?.(`[${extension.manifest.id}]`, msg.message)
+          const level = String(msg.level || 'info')
+          const text = `[${extension.manifest.id}] ${msg.message}`
+          switch (level) {
+            case 'error':
+              console.error(text)
+              break
+            case 'warn':
+              console.warn(text)
+              break
+            case 'debug':
+              console.debug(text)
+              break
+            case 'info':
+              console.info(text)
+              break
+            default:
+              console.log(text)
+          }
           return
         }
       } catch (e) {
